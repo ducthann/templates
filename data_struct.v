@@ -81,6 +81,8 @@ Defined.
 Definition pointer_of (n : Node) :=  fst n.
 Definition lock_of (n : Node) := fst (snd n).
 Definition node_of (n : Node) := snd (snd n).
+Definition min_of (rg: (number * number)) := fst rg.
+Definition max_of (rg: (number * number)) := snd rg.
 
 
 Section NodeRep.
@@ -90,8 +92,9 @@ Definition inFP (γ_f: gname) (n : Node) : mpred :=
       (own (inG0 := nodeset_inG)) γ_f (◯ N : gset_authR _) ∧ ⌜n ∈ N⌝.
 
 Class NodeRep : Type := {
-      node : Node → @multiset_flowint_ur Key _ _ → gset Key → mpred;
-      node_sep_star: ∀ n I_n I_n' C C', node n I_n C ∗ node n I_n' C' -∗ False;
+    node : Node → @multiset_flowint_ur Key _ _ → gset Key → mpred;
+    (*
+      node_sep_star: ∀ n I_n I_n' C C', node n I_n C ∗ node n I_n' C' -∗ False; *)
       node_rep_R_valid_pointer: forall n I_n C, node n I_n C -∗ valid_pointer (pointer_of n);
       node_rep_R_pointer_null: forall n I_n C, node n I_n C -∗ ⌜is_pointer_or_null (pointer_of n)⌝;
       node_size: nat;
@@ -124,14 +127,14 @@ Section give_up.
   (* struct node_t {node *t; lock_t lock; int min; int max; } node_t;
     struct node {int key; void *value; void *left, *right;} node; *)
 
-  Definition node_rep γ_f (pn n lock: val) (min max : number) I_n C :=
-    ⌜repable_signed (number2Z min) ∧ repable_signed (number2Z max) /\
-      is_pointer_or_null n /\ is_pointer_or_null lock⌝ ∧
-      field_at Ews (t_struct_node) [StructField _t] n pn ∗ (* pn ->n*) 
-      field_at Ews (t_struct_node) [StructField _min] (vint (number2Z (min))) pn ∗ (*pn -> min*)
-      field_at Ews (t_struct_node) [StructField _max] (vint (number2Z (max))) pn ∗ (*pn -> max*) 
-      malloc_token Ews t_struct_node pn ∗ inFP γ_f (pn, (lock, n)) ∗
-      node (pn, (lock, n)) I_n C.
+  Definition node_rep γ_f (n : Node) (rg : (number * number)) I_n C :=
+    ⌜repable_signed (number2Z (min_of rg)) ∧ repable_signed (number2Z (max_of rg)) /\
+      is_pointer_or_null (node_of n) /\ is_pointer_or_null (lock_of n)⌝ ∧
+      field_at Ews (t_struct_node) [StructField _t] (node_of n) (pointer_of n) ∗ (* pn ->n*) 
+      field_at Ews (t_struct_node) [StructField _min] (vint (number2Z (min_of rg))) (pointer_of n) ∗ (*pn -> min*)
+      field_at Ews (t_struct_node) [StructField _max] (vint (number2Z (max_of rg))) (pointer_of n) ∗ (*pn -> max*) 
+      malloc_token Ews t_struct_node (pointer_of n) ∗ inFP γ_f n ∗
+      node n I_n C.
 
 
   Definition nodePred γ_I γ_k n (In : @multiset_flowint_ur Key _ _ ) Cn :=
@@ -162,6 +165,17 @@ Section give_up.
     destruct Hown as (Hin & _).
     iPureIntro.
     set_solver.
+  Qed.
+
+  Lemma node_conflict_local γ_f n (rg rg': (number * number)) I_n I_n' C C':
+  node_rep γ_f n rg I_n C ∗ node_rep γ_f n rg' I_n' C' -∗ False.
+  Proof.
+    iIntros "(H1 & H2)".
+    unfold node_rep.
+    iDestruct "H1" as "(((_ & _) & _) & (H1 & _)) ".
+    iDestruct "H2" as "(((_ & _) & _) & (H2 & _)) ".
+    iPoseProof (field_at_conflict Ews t_struct_node (DOT _t) _  with "[$H1 $H2]") as "HF";
+      simpl; eauto. lia.
   Qed.
 
 
