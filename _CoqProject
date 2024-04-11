@@ -9,7 +9,7 @@
 -Q ../VST/atomics VST.atomics 
 -Q ../VST/zlist VST.zlist 
 
--Q . bst
+-Q . templ
 flows_ora.v
 keyset_ra_ora.v
 
