@@ -1,3 +1,4 @@
+(*Require Import VST.concurrency.conclib. *)
 Require Import flows.flows.
 Require Import flows.multiset_flows.
 From iris_ora Require Export ora.
@@ -6,8 +7,8 @@ Local Arguments valid _ _  !_ /.
 Local Arguments op _ _ _ !_ /.
 Local Arguments pcore _ _ !_ /.
 
-Global Instance Node_EqDecision:  EqDecision Node.
-Proof. unfold EqDecision, Decision. apply Val.eq. Qed.
+Global Instance Node_EqDecision:  EqDecision Node. Admitted.
+
 
 Global Instance Node_countable : Countable Node.
 Proof. unfold Node. Admitted.

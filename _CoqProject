@@ -1,4 +1,5 @@
 -Q ../VST/shared VST.shared
+-Q ../VST/ora/theories iris_ora
 -Q ../VST/msl VST.msl 
 -Q ../VST/sepcomp VST.sepcomp 
 -Q ../VST/veric VST.veric 

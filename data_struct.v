@@ -6,12 +6,14 @@ Require Import flows.multiset_flows.
 Require Import flows.flows.
 Require Import iris_ora.algebra.gmap.
 Require Import iris_ora.logic.own.
+Require Import iris_ora.algebra.ext_order.
 Require Import VST.floyd.proofauto.
 Require Import VST.atomics.general_locks.
 Require Import Coq.Sets.Ensembles. 
 Require Import bst.puretree.
 Require Import bst.giveup_template.
 Require Import VST.floyd.library.
+Require Import VST.atomics.verif_lock_atomic.
 From iris_ora.algebra Require Import frac_auth.
 Require Import bst.flows_ora.
 Require Import bst.keyset_ra_ora.
@@ -35,6 +37,7 @@ Section Give_Up_Cameras.
 
   (* RA for authoritative sets of nodes *)
   (* Definition gset1 := gmap K unit. *)
+  (*
   Canonical Structure gsetR A `{Countable A} := gmapR A unit.
   Canonical Structure gsetUR A `{Countable A} := gmapUR A unit.
   Lemma gst A `{Countable A} n (x y : gsetUR A): ✓{n} y → x ≼ₒ{n} y → x ≼{n} y.
@@ -48,16 +51,16 @@ Section Give_Up_Cameras.
     right; eexists _, _; split; first done.
     split; first done; auto.
   Qed.
-  
-  Canonical Structure gset_authR A `{Countable A} := @authR _ (gst A).
+*)
+  Locate authR.
+  Canonical Structure gset_authR A `{Countable A} := inclR(iris.algebra.auth.authR(gsetR A)).
 
-  Class nodesetG Σ := NodesetG { nodeset_inG :> inG Σ (gset_authR Node) }.
-  Definition nodesetΣ : gFunctors := #[GFunctor (gset_authR Node)].
+  Class nodesetG Σ := NodesetG { nodeset_inG :> inG Σ (gset_authR Node ) }.
+  Definition nodesetΣ : gFunctors := #[GFunctor (gset_authR Node )].
 
   Instance subG_nodesetΣ {Σ} : subG nodesetΣ Σ → nodesetG Σ.
   Proof. solve_inG. Qed.
 
-  About keysetUR.
   Lemma ks A `{Countable A} n  (x y : keysetUR A): ✓{n} y → x ≼ₒ{n} y → x ≼{n} y.
   Proof. intros Hv Hxy; destruct y; destruct Hxy; subst; try done. Qed.
   Canonical Structure keyset_authR A `{Countable A} := @authR _ (ks A).
@@ -67,8 +70,6 @@ Section Give_Up_Cameras.
 
   Instance subG_keysetΣ {Σ} : subG (@keysetΣ) Σ → (@keysetG) Σ.
   Proof. solve_inG. Qed.
-
-  Locate prod.
 End Give_Up_Cameras.
 
 Definition number2Z (x : number) : Z :=
@@ -98,18 +99,15 @@ Defined.
 Section NodeRep.
   Context `{!VSTGS unit Σ, !flowintG Σ, !nodesetG Σ, !keysetG Σ }.
 
-  Locate keysetG.
   Definition inFP (γ_f: gname) (n : Node) : mpred :=
-    ∃ (N: gmap Node unit),
-      (own (inG0 := nodeset_inG)) γ_f (◯ N) ∧ ⌜N !! n = Some tt⌝.
-
-  Locate K.
+    ∃ (N: gset Node),
+      (own (inG0 := nodeset_inG)) γ_f (◯ N : gset_authR _) ∧ ⌜n ∈ N⌝.
 
   Class NodeRep : Type := {
       node : Node → @multiset_flowint_ur Key _ _ → gset Key → mpred;
       node_sep_star: ∀ n I_n I_n' C C', node n I_n C ∗ node n I_n' C' -∗ False;
-      node_rep_R_valid_pointer: forall n I_n C, node n I_n C -∗ valid_pointer n;
-      node_rep_R_pointer_null: forall n I_n C, node n I_n C -∗ ⌜is_pointer_or_null n⌝;
+      (*node_rep_R_valid_pointer: forall n I_n C, node n I_n C -∗ valid_pointer n;
+      node_rep_R_pointer_null: forall n I_n C, node n I_n C -∗ ⌜is_pointer_or_null n⌝; *)
       node_size: nat;
   }.
    
@@ -119,25 +117,11 @@ Section NodeRep.
     intros.
     apply bi.and_persistent; try apply _.
     apply own_core_persistent.
-    apply (auth_frag_core_id _ (gst Node)).
+    Locate auth_frag_core_id.
+    apply (iris.algebra.auth.auth_frag_core_id _ ).
     apply _.
   Qed.
 
-  
-  (*
-  Lemma inFP_equiv γ_f n1 n2:
-  inFP γ_f n1 ∗ inFP γ_f n2 -∗ ⌜n1 = n2⌝.
-  Proof.
-    iIntros "[#H1 #H2]".
-    unfold inFP.
-    iDestruct "H1" as (N) "(H11 & %H12)".
-    iDestruct "H2" as (N1) "(H21 & %H22)".
-    iCombine "H11 H21" as "HV".
-    rewrite -own_op.
-    Search op auth_frag .
-    Check frac_auth_agreeI.
-    Locate "◯".
-    *)
 End NodeRep.
 
 Check NodeRep.
@@ -145,10 +129,10 @@ Check NodeRep.
 #[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
 Definition Vprog : varspecs.  mk_varspecs prog. Defined.
 
-
 Section give_up.
   Context `{N: NodeRep } `{EqDecision K} `{Countable K}.
-  Context `{!VSTGS unit Σ, !flowintG Σ, !nodesetG Σ, !keysetG Σ }.
+  Context `{!VSTGS OK_ty Σ, !cinvG Σ, atom_impl : !atomic_int_impl (Tstruct _atom_int noattr), !flowintG Σ, !nodesetG Σ, !keysetG Σ, inG Σ (frac_authR (agreeR Node)) }.
+  
   
   Definition t_struct_node := Tstruct _node_t noattr.
   Definition t_struct_nodeds := Tstruct _node noattr.
@@ -156,26 +140,74 @@ Section give_up.
 
   (*
     typedef struct node_t {node *t; lock_t lock; int min; int max; } node_t;
-
     typedef struct node {int key; void *value; void *left, *right;} node;
-   
-
    *)
+  Print Node.
 
-  Definition node_rep (pn n lock: val) (min max : number) I_n C :=
+  Definition node_rep γ_f (pn n lock: val) (min max : number) I_n C :=
     ⌜repable_signed (number2Z min) ∧ repable_signed (number2Z max) /\
       is_pointer_or_null n /\ is_pointer_or_null lock⌝ ∧ 
       field_at Ews (t_struct_node) [StructField _t] n pn ∗ (* pn ->n*) 
       field_at Ews (t_struct_node) [StructField _min] (vint (number2Z (min))) pn ∗ (*pn -> min*)
       field_at Ews (t_struct_node) [StructField _max] (vint (number2Z (max))) pn ∗ (*pn -> max*) 
-      malloc_token Ews t_struct_node pn ∗
-      node n I_n C.
-  
+      malloc_token Ews t_struct_node pn ∗ inFP γ_f (pn, (lock, n)) ∗
+      node (pn, (lock, n)) I_n C.
+
+
   Definition nodePred γ_I γ_k n (In : @multiset_flowint_ur Key _ _ ) Cn  : mpred :=
-                    node n In Cn 
-                    ∗  own γ_k (◯ flows.keyset_ra.prod (keyset _ _ Key In n, Cn)  : keyset_authR Key)
-                    ∗ own γ_I (◯ In) 
-                    ∗ ⌜dom In = {[n]}⌝.
+   node n In Cn ∗ own γ_k (◯ prod (keyset _ _ Key In n, Cn): keyset_authR Key) ∗
+     own γ_I (◯ In) ∗ ⌜dom In = {[n]}⌝.
+
+  Check gset.
+
+  Definition ltree (p lock : val) R:=
+  ∃ lsh, ⌜field_compatible t_struct_node nil p /\ readable_share lsh⌝ ∧
+  (field_at lsh t_struct_node [StructField _lock] lock p ∗ inv_for_lock lock R).
+
+  Check inv_for_lock _ .
+
+  Definition lock_of (n : Node) := fst (snd n).
+
+  Definition node_lock_inv_pred  gp node := my_half gp 1 (to_agree node) .
+  
+  Definition globalGhost
+    γ_I γ_f γ_k (r :Node) C (I: @multiset_flowint_ur Key _ _): mpred :=
+    own γ_I (● I) ∗ ⌜globalinv _ _ Key r I⌝ ∗
+      own γ_k (● prod (KS, C): keyset_authR Key) ∗ own (inG0 := nodeset_inG) γ_f (● (dom I)).
+
+  Set Printing Implicit.
+  Print multiset_flowint_ur.
+  Print flowintUR .
+  Locate flowintT.
+  (* (gset Node)  *)
+  
+  Lemma node_exist_in_tree (* `{Dom multiset_flowint_ur multiset_flowint_ur} *)
+    (γ_f: gname) (n : (val * val * Node)) (I: @multiset_flowint_ur Key _ _):
+    inFP γ_f n ∗ own γ_f (● (dom I)) ⊢ ⌜snd n ∈ I⌝.
+  Proof.
+    intros; iIntros "(#Hfp & Hown)".
+    unfold inFP.
+    iDestruct "Hfp" as (n1) "[Hown1 %H1]".
+    iDestruct (own_valid_2 _  with "Hown Hown1") as "H1".
+    destruct n.
+    simpl.
+    Check excl_auth_agree.
+    
+  Admitted.
+
+  Check inv_for_lock _ .
+  Check lock_inv.
+
+  Definition test (R: iPropO Σ) (lock : val) i g : mpred : cinv i g (inv_for_lock lock R) .
+
+  
+  
+
+  Definition node_lock_inv_pred g p gp node := my_half gp Tsh node * node_rep p g gp node.
+  
+  
+
+  
   
 
 
