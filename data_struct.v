@@ -147,7 +147,8 @@ Section give_up.
   (field_at lsh t_struct_node [StructField _lock] lock p ∗ inv_for_lock lock R).
 
   
-  Definition node_lock_inv_pred  gp node := my_half gp 1 (to_agree node) .
+  Definition node_lock_inv_pred γ_f γ_g node rg I_n C:=
+    my_half γ_g 1 (to_agree node) ∗ node_rep γ_f node rg I_n C.
   
   Definition globalGhost
     γ_I γ_f γ_k (r :Node) C (I: @multiset_flowint_ur Key _ _): mpred :=
