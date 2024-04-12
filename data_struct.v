@@ -93,21 +93,20 @@ Definition inFP (γ_f: gname) (n : Node) : mpred :=
 
 Class NodeRep : Type := {
     node : Node → @multiset_flowint_ur Key _ _ → gset Key → mpred;
-    (*
-      node_sep_star: ∀ n I_n I_n' C C', node n I_n C ∗ node n I_n' C' -∗ False; *)
-      node_rep_R_valid_pointer: forall n I_n C, node n I_n C -∗ valid_pointer (pointer_of n);
-      node_rep_R_pointer_null: forall n I_n C, node n I_n C -∗ ⌜is_pointer_or_null (pointer_of n)⌝;
-      node_size: nat;
+    (* node_sep_star: ∀ n I_n I_n' C C', node n I_n C ∗ node n I_n' C' -∗ False; *)
+    node_rep_R_valid_pointer: forall n I_n C, node n I_n C -∗ valid_pointer (pointer_of n);
+    node_rep_R_pointer_null: forall n I_n C, node n I_n C -∗ ⌜is_pointer_or_null (pointer_of n)⌝;
+    node_size: nat;
 }.
-   
+
 Global Instance inFP_persistent γ_f n: Persistent (inFP γ_f n).
 Proof.
   apply bi.exist_persistent.
-  intros.
-  apply bi.and_persistent; try apply _.
+  intros x.
+  apply bi.and_persistent.
   apply own_core_persistent.
   apply (iris.algebra.auth.auth_frag_core_id _ ).
-  apply _.
+  apply _. apply _.
 Qed.
 
 End NodeRep.
@@ -117,7 +116,8 @@ Definition Vprog : varspecs.  mk_varspecs prog. Defined.
 
 Section give_up.
   Context `{N: NodeRep } `{EqDecision K} `{Countable K}.
-  Context `{!VSTGS OK_ty Σ, !cinvG Σ, atom_impl : !atomic_int_impl (Tstruct _atom_int noattr), !flowintG Σ, !nodesetG Σ, !keysetG Σ, inG Σ (frac_authR (agreeR Node)) }.
+  Context `{!VSTGS OK_ty Σ, !cinvG Σ, atom_impl : !atomic_int_impl (Tstruct _atom_int noattr),
+            !flowintG Σ, !nodesetG Σ, !keysetG Σ, inG Σ (frac_authR (agreeR Node))}.
   
   
   Definition t_struct_node := Tstruct _node_t noattr.
@@ -177,6 +177,20 @@ Section give_up.
     iDestruct "H2" as "(((_ & _) & _) & (H2 & _)) ".
     iPoseProof (field_at_conflict Ews t_struct_node (DOT _t) _  with "[$H1 $H2]") as "HF";
       simpl; eauto. lia.
+  Qed.
+
+  Lemma ghost_snapshot_fp γ_f (Ns: gset Node) n:
+    own (inG0 := nodeset_inG) γ_f (● Ns) ∧ ⌜n ∈ Ns⌝
+    ==∗ own γ_f (inG0 := nodeset_inG) (● Ns) ∗ inFP γ_f n.
+  Proof.
+    iIntros "(H1 & %H2)".
+    iMod (own_update (i := nodeset_inG) γ_f (● Ns) (● Ns ⋅ ◯ Ns) with "[$]") as "H".
+    { apply auth_update_dfrac_alloc. apply _. done. }
+    iDestruct "H" as "(Haa & Haf)".
+    iModIntro.
+    iFrame.
+    iExists Ns.
+    by iFrame.
   Qed.
 
 
