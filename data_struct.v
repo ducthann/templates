@@ -117,8 +117,6 @@ Section give_up.
   Context `{N: NodeRep } `{EqDecision K} `{Countable K}.
   Context `{!VSTGS OK_ty Σ, !cinvG Σ, atom_impl : !atomic_int_impl (Tstruct _atom_int noattr),
             !flowintG Σ, !nodesetG Σ, !keysetG Σ, inG Σ (frac_authR (agreeR Node))}.
-
-  Check inG.
   
   Definition t_struct_node := Tstruct _node_t noattr.
   Definition t_struct_nodeds := Tstruct _node noattr.
@@ -154,9 +152,8 @@ Section give_up.
     inFP γ_f n ∗ own (inG0 := nodeset_inG) γ_f (● (dom I)) ⊢ ⌜n ∈ dom I⌝.
   Proof.
     intros; iIntros "(#Hfp & Hown)".
-    unfold inFP.
     iDestruct "Hfp" as (n1) "[Hown1 %H1]".
-    iDestruct (own_valid_2  with "Hown Hown1") as %Hown.
+    iDestruct (own_valid_2 with "Hown Hown1") as %Hown.
     rewrite auth_both_valid_discrete in Hown.
     set_solver.
   Qed.
@@ -164,12 +161,8 @@ Section give_up.
   Lemma node_conflict_local γ_f γ_k n (rg rg': (number * number)) I_n I_n' C C':
   node_rep γ_f γ_k n rg I_n C ∗ node_rep γ_f γ_k n rg' I_n' C' -∗ False.
   Proof.
-    iIntros "(H1 & H2)".
-    unfold node_rep.
-    iDestruct "H1" as "(((_ & _) & _) & (H1 & _)) ".
-    iDestruct "H2" as "(((_ & _) & _) & (H2 & _)) ".
-    iPoseProof (field_at_conflict Ews t_struct_node (DOT _t)  with "[$H1 $H2]") as "HF";
-      simpl; eauto. done.
+    iIntros "((((_ & _) & _) & (H1 & _))  & (((_ & _) & _) & (H2 & _)))".
+    iPoseProof (field_at_conflict Ews t_struct_node (DOT _t) with "[$H1 $H2 //]") as "HF"; try done; auto.
   Qed.
 
   Lemma ghost_snapshot_fp γ_f (Ns: gset Node) n:
@@ -178,7 +171,7 @@ Section give_up.
   Proof.
     iIntros "(H1 & %H2)".
     iMod (own_update (i := nodeset_inG) γ_f (● Ns) (● Ns ⋅ ◯ Ns) with "[$]") as "H".
-    { apply auth_update_dfrac_alloc. apply _. done. }
+    { apply auth_update_dfrac_alloc. apply _. auto. }
     iDestruct "H" as "(Haa & Haf)".
     iModIntro.
     by iFrame.
@@ -188,8 +181,6 @@ Section give_up.
     ∃ lsh, ⌜field_compatible t_struct_node nil p /\ readable_share lsh⌝ ∧
              (field_at lsh t_struct_node [StructField _lock] lock p ∗ inv_for_lock lock R).
 
-
- 
   Definition node_lock_inv_pred γ_f γ_g γ_k node rg I_n C :=
     my_half γ_g 1 (to_agree node) ∗ node_rep γ_f γ_k node rg I_n C.
   
@@ -197,15 +188,12 @@ Section give_up.
       exclusive_mpred (node_lock_inv_pred γ_f γ_g γ_k node rg I_n C).
   Proof.
     intros.
-    unfold exclusive_mpred, node_lock_inv_pred.
     iIntros "((_ & H) & (_ & H'))".
     iPoseProof (node_conflict_local with "[$H $H']") as "?"; done.
   Qed.
 
-  Definition nodeFull γ_f γ_g γ_k n rg: mpred :=
+  Definition nodeFull γ_f γ_g γ_k n rg : mpred :=
         ∃ In C, ltree (pointer_of n) (lock_of n) (node_lock_inv_pred γ_f γ_g γ_k n rg In C).
-
-  Check public_half.
 
   Definition CSSi γ_I γ_f γ_g γ_k r C I rg: mpred :=
                     globalGhost γ_I γ_f γ_k r C I 
@@ -227,17 +215,27 @@ Section give_up.
     iIntros "Hi Dom_In Hcss".
     iDestruct "Dom_In" as %Dom_In.
     iDestruct "Hcss" as "((HI & Hglob & Hks & Hdom) & Hbigstar)".
-    Check own_valid_2.
     iDestruct (own_valid_2  with "HI Hi") as %Hown.
     rewrite auth_both_valid_discrete in Hown.
-    destruct Hown as [Io I_incl].
-    destruct Io as [Io Io1].
+    destruct Hown as [[Io Io1] I_incl].
     iPureIntro.
-    rewrite Io1.
-    rewrite intComp_dom. set_solver.
-    rewrite <- Io1; auto.
+    rewrite Io1 intComp_dom; last first; try rewrite <- Io1; auto.
+    set_solver.
   Qed.
-  
+
+  (* root is in footprint *)
+  Lemma ghost_update_root γ_I γ_f γ_g γ_k r C rg :
+    CSS γ_I γ_f γ_g γ_k r C rg ==∗
+       CSS γ_I γ_f γ_g γ_k r C rg ∗ inFP γ_f r.
+  Proof.
+    iIntros "Hcss".
+    iDestruct "Hcss" as (I) "((HI & #Hglob & Hks & Hdom) & Hbigstar)".
+    iDestruct "Hglob" as %Hglob.
+    specialize ((globalinv_root_fp I r) Hglob); intros.
+    iMod (ghost_snapshot_fp γ_f (dom I) r with "[$Hdom //]") as "(Hdom & #Hinfp)".
+    iIntros "!>".
+    iFrame "Hinfp ∗ %".
+  Qed.
   
 End give_up.
 
