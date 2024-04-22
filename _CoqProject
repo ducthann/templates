@@ -9,7 +9,7 @@
 -Q ../VST/atomics VST.atomics 
 -Q ../VST/zlist VST.zlist 
 
--Q . templ
+-Q . tmpl
 flows_ora.v
 keyset_ra_ora.v
 
@@ -21,7 +21,8 @@ bst.v
 bst_giveup.v
 list.v 
 list_giveup.v
-# data_struct.v
+
+data_struct.v
 # giveup_lib.v
 # giveup_specs.v
 

@@ -1,0 +1,340 @@
+DIGEST 1cc8be7b819bee7e92589df9667eb449
+Ftmpl.data_struct
+R15:37 VST.concurrency.conclib <> <> lib
+R73:76 iris.algebra.excl <> <> lib
+R78:81 iris.algebra.auth <> <> lib
+R83:86 iris.algebra.gmap <> <> lib
+R88:92 iris.algebra.agree <> <> lib
+R94:97 iris.algebra.gset <> <> lib
+R115:131 flows.inset_flows <> <> lib
+R149:162 flows.auth_ext <> <> lib
+R180:199 flows.multiset_flows <> <> lib
+R217:227 flows.flows <> <> lib
+R245:265 iris_ora.algebra.gmap <> <> lib
+R283:300 iris_ora.logic.own <> <> lib
+R318:343 iris_ora.algebra.ext_order <> <> lib
+R361:386 iris_ora.algebra.frac_auth <> <> lib
+R404:422 VST.floyd.proofauto <> <> lib
+R440:464 VST.atomics.general_locks <> <> lib
+R482:498 VST.floyd.library <> <> lib
+R516:544 VST.atomics.verif_lock_atomic <> <> lib
+R562:574 tmpl.puretree <> <> lib
+R592:605 tmpl.flows_ora <> <> lib
+R623:642 tmpl.giveup_template <> <> lib
+R660:677 tmpl.keyset_ra_ora <> <> lib
+def 692:694 <> Key
+R699:699 Coq.Numbers.BinNums <> Z ind
+sec 711:725 <> Give_Up_Cameras
+prf 736:741 <> flwint
+binder 743:743 <> n:1
+R753:771 tmpl.flows_ora <> multiset_flowint_ur canonstruc
+R773:775 tmpl.data_struct <> Key def
+binder 746:746 <> x:2
+binder 748:748 <> y:3
+R791:795 Coq.Unicode.Utf8_core <> ::type_scope:x_'→'_x not
+R783:786 iris.algebra.cmra <> :::'✓{'_x_'}'_x not
+R788:789 iris.algebra.cmra <> :::'✓{'_x_'}'_x not
+R787:787 tmpl.data_struct <> n:1 var
+R790:790 tmpl.data_struct <> y:3 var
+R809:813 Coq.Unicode.Utf8_core <> ::type_scope:x_'→'_x not
+R797:804 iris_ora.algebra.ora <> ::stdpp_scope:x_'≼ₒ{'_x_'}'_x not
+R806:807 iris_ora.algebra.ora <> ::stdpp_scope:x_'≼ₒ{'_x_'}'_x not
+R805:805 tmpl.data_struct <> n:1 var
+R796:796 tmpl.data_struct <> x:2 var
+R808:808 tmpl.data_struct <> y:3 var
+R815:819 iris.algebra.cmra <> ::stdpp_scope:x_'≼{'_x_'}'_x not
+R821:822 iris.algebra.cmra <> ::stdpp_scope:x_'≼{'_x_'}'_x not
+R820:820 tmpl.data_struct <> n:1 var
+R814:814 tmpl.data_struct <> x:2 var
+R823:823 tmpl.data_struct <> y:3 var
+def 932:941 <> flow_authR
+R947:951 iris_ora.algebra.auth <> authR def
+R955:960 tmpl.data_struct <> flwint thm
+rec 1040:1047 <> flowintG
+proj 1066:1076 <> flowint_inG
+binder 1049:1050 <> Σ:4
+R1081:1083 iris_ora.logic.own <> inG class
+R1085:1086 tmpl.data_struct <> Σ:4 var
+R1089:1098 tmpl.data_struct <> flow_authR canonstruc
+def 1117:1125 <> flowintΣ
+R1129:1137 iris_ora.logic.iprop <> gFunctors rec
+R1142:1143 iris_ora.logic.iprop <> :::'#['_x_';'_'..'_';'_x_']' not
+R1165:1165 iris_ora.logic.iprop <> :::'#['_x_';'_'..'_';'_x_']' not
+R1144:1151 iris_ora.logic.iprop <> GFunctor constr
+R1154:1163 tmpl.data_struct <> flow_authR canonstruc
+inst 1180:1193 <> subG_flowintΣ
+binder 1196:1197 <> Σ:7
+R1219:1223 Coq.Unicode.Utf8_core <> ::type_scope:x_'→'_x not
+R1202:1205 iris_ora.logic.iprop <> subG class
+R1217:1218 tmpl.data_struct <> Σ:7 var
+R1207:1215 tmpl.data_struct <> flowintΣ def
+R1224:1231 tmpl.data_struct <> flowintG class
+R1233:1234 tmpl.data_struct <> Σ:7 var
+def 1331:1340 <> gset_authR
+binder 1342:1342 <> A:8
+R1346:1354 stdpp.countable <> Countable class
+R1356:1356 tmpl.data_struct <> A:8 var
+binder 1346:1356 <> H:10
+R1362:1366 iris_ora.algebra.ext_order <> inclR abbrev
+R1368:1390 iris.algebra.auth <> authR def
+R1392:1396 iris.algebra.gset <> gsetR canonstruc
+R1398:1398 tmpl.data_struct <> A:8 var
+R1368:1390 iris.algebra.auth <> authR def
+R1392:1396 iris.algebra.gset <> gsetR canonstruc
+R1398:1398 tmpl.data_struct <> A:8 var
+R1368:1390 iris.algebra.auth <> authR def
+R1392:1396 iris.algebra.gset <> gsetR canonstruc
+R1398:1398 tmpl.data_struct <> A:8 var
+R1368:1390 iris.algebra.auth <> authR def
+R1392:1396 iris.algebra.gset <> gsetR canonstruc
+R1398:1398 tmpl.data_struct <> A:8 var
+rec 1412:1419 <> nodesetG
+proj 1438:1448 <> nodeset_inG
+binder 1421:1422 <> Σ:11
+R1453:1455 iris_ora.logic.own <> inG class
+R1457:1458 tmpl.data_struct <> Σ:11 var
+R1461:1470 tmpl.data_struct <> gset_authR canonstruc
+R1472:1475 flows.flows <> Node def
+def 1495:1503 <> nodesetΣ
+R1507:1515 iris_ora.logic.iprop <> gFunctors rec
+R1520:1521 iris_ora.logic.iprop <> :::'#['_x_';'_'..'_';'_x_']' not
+R1549:1549 iris_ora.logic.iprop <> :::'#['_x_';'_'..'_';'_x_']' not
+R1522:1529 iris_ora.logic.iprop <> GFunctor constr
+R1532:1541 tmpl.data_struct <> gset_authR canonstruc
+R1543:1546 flows.flows <> Node def
+inst 1564:1577 <> subG_nodesetΣ
+binder 1580:1581 <> Σ:14
+R1603:1607 Coq.Unicode.Utf8_core <> ::type_scope:x_'→'_x not
+R1586:1589 iris_ora.logic.iprop <> subG class
+R1601:1602 tmpl.data_struct <> Σ:14 var
+R1591:1599 tmpl.data_struct <> nodesetΣ def
+R1608:1615 tmpl.data_struct <> nodesetG class
+R1617:1618 tmpl.data_struct <> Σ:14 var
+prf 1655:1656 <> ks
+binder 1658:1658 <> A:15
+R1662:1670 stdpp.countable <> Countable class
+R1672:1672 tmpl.data_struct <> A:15 var
+binder 1662:1672 <> H:17
+binder 1675:1675 <> n:18
+R1685:1692 tmpl.keyset_ra_ora <> keysetUR canonstruc
+R1694:1694 tmpl.data_struct <> A:15 var
+binder 1679:1679 <> x:19
+binder 1681:1681 <> y:20
+R1706:1710 Coq.Unicode.Utf8_core <> ::type_scope:x_'→'_x not
+R1698:1701 iris.algebra.cmra <> :::'✓{'_x_'}'_x not
+R1703:1704 iris.algebra.cmra <> :::'✓{'_x_'}'_x not
+R1702:1702 tmpl.data_struct <> n:18 var
+R1705:1705 tmpl.data_struct <> y:20 var
+R1724:1728 Coq.Unicode.Utf8_core <> ::type_scope:x_'→'_x not
+R1712:1719 iris_ora.algebra.ora <> ::stdpp_scope:x_'≼ₒ{'_x_'}'_x not
+R1721:1722 iris_ora.algebra.ora <> ::stdpp_scope:x_'≼ₒ{'_x_'}'_x not
+R1720:1720 tmpl.data_struct <> n:18 var
+R1711:1711 tmpl.data_struct <> x:19 var
+R1723:1723 tmpl.data_struct <> y:20 var
+R1730:1734 iris.algebra.cmra <> ::stdpp_scope:x_'≼{'_x_'}'_x not
+R1736:1737 iris.algebra.cmra <> ::stdpp_scope:x_'≼{'_x_'}'_x not
+R1735:1735 tmpl.data_struct <> n:18 var
+R1729:1729 tmpl.data_struct <> x:19 var
+R1738:1738 tmpl.data_struct <> y:20 var
+def 1835:1846 <> keyset_authR
+binder 1848:1848 <> A:21
+R1852:1860 stdpp.countable <> Countable class
+R1862:1862 tmpl.data_struct <> A:21 var
+binder 1852:1862 <> H:23
+R1869:1873 iris_ora.algebra.auth <> authR def
+R1878:1879 tmpl.data_struct <> ks thm
+R1881:1881 tmpl.data_struct <> A:21 var
+rec 1894:1900 <> keysetG
+proj 1918:1927 <> keyset_inG
+binder 1902:1903 <> Σ:24
+R1932:1934 iris_ora.logic.own <> inG class
+R1936:1937 tmpl.data_struct <> Σ:24 var
+R1940:1951 tmpl.data_struct <> keyset_authR canonstruc
+R1953:1955 tmpl.data_struct <> Key def
+def 1976:1983 <> keysetΣ
+R1987:1995 iris_ora.logic.iprop <> gFunctors rec
+R2000:2001 iris_ora.logic.iprop <> :::'#['_x_';'_'..'_';'_x_']' not
+R2029:2029 iris_ora.logic.iprop <> :::'#['_x_';'_'..'_';'_x_']' not
+R2002:2009 iris_ora.logic.iprop <> GFunctor constr
+R2012:2023 tmpl.data_struct <> keyset_authR canonstruc
+R2025:2027 tmpl.data_struct <> Key def
+inst 2044:2056 <> subG_keysetΣ
+binder 2059:2060 <> Σ:27
+R2084:2088 Coq.Unicode.Utf8_core <> ::type_scope:x_'→'_x not
+R2065:2068 iris_ora.logic.iprop <> subG class
+R2082:2083 tmpl.data_struct <> Σ:27 var
+R2072:2079 tmpl.data_struct <> keysetΣ def
+R2091:2097 tmpl.data_struct <> keysetG class
+R2100:2101 tmpl.data_struct <> Σ:27 var
+R2133:2147 tmpl.data_struct Give_Up_Cameras <> sec
+def 2162:2169 <> number2Z
+R2176:2181 tmpl.puretree <> number ind
+binder 2172:2172 <> x:28
+R2186:2186 Coq.Numbers.BinNums <> Z ind
+R2199:2199 tmpl.data_struct <> x:28 var
+R2212:2225 tmpl.puretree <> Finite_Integer constr
+R2240:2251 tmpl.puretree <> Neg_Infinity constr
+R2256:2269 compcert.lib.Integers Int min_signed def
+R2277:2288 tmpl.puretree <> Pos_Infinity constr
+R2293:2306 compcert.lib.Integers Int max_signed def
+ind 2443:2446 <> enum
+constr 2458:2458 <> F
+constr 2462:2463 <> NF
+constr 2467:2468 <> NN
+scheme 2443:2446 <> enum_rect
+scheme 2443:2446 <> enum_ind
+scheme 2443:2446 <> enum_rec
+scheme 2443:2446 <> enum_sind
+def 2483:2487 <> enums
+binder 2489:2489 <> x:32
+R2493:2495 compcert.common.Values <> val ind
+R2508:2508 tmpl.data_struct <> x:32 var
+R2519:2519 tmpl.data_struct <> F constr
+R2524:2527 compcert.common.Values <> Vint constr
+R2529:2536 compcert.lib.Integers Int zero def
+R2542:2543 tmpl.data_struct <> NF constr
+R2548:2551 compcert.common.Values <> Vint constr
+R2553:2559 compcert.lib.Integers Int one def
+R2565:2566 tmpl.data_struct <> NN constr
+R2571:2574 compcert.common.Values <> Vint constr
+R2577:2584 compcert.lib.Integers Int repr def
+inst 2618:2631 <> enum_inhabited
+R2635:2644 VST.zlist.sublist <> Inhabitant class
+R2647:2650 tmpl.data_struct <> enum ind
+R2670:2679 VST.zlist.sublist <> Inhabitant class
+R2688:2688 tmpl.data_struct <> F constr
+R2688:2688 tmpl.data_struct <> F constr
+def 2712:2721 <> pointer_of
+R2728:2731 flows.flows <> Node def
+binder 2724:2724 <> n:34
+R2738:2740 Coq.Init.Datatypes <> fst def
+R2742:2742 tmpl.data_struct <> n:34 var
+def 2756:2762 <> lock_of
+R2769:2772 flows.flows <> Node def
+binder 2765:2765 <> n:35
+R2778:2780 Coq.Init.Datatypes <> fst def
+R2783:2785 Coq.Init.Datatypes <> snd def
+R2787:2787 tmpl.data_struct <> n:35 var
+def 2802:2808 <> node_of
+R2815:2818 flows.flows <> Node def
+binder 2811:2811 <> n:36
+R2824:2826 Coq.Init.Datatypes <> snd def
+R2829:2831 Coq.Init.Datatypes <> snd def
+R2833:2833 tmpl.data_struct <> n:36 var
+def 2848:2853 <> min_of
+R2867:2869 Coq.Init.Datatypes <> ::type_scope:x_'*'_x not
+R2861:2866 tmpl.puretree <> number ind
+R2870:2875 tmpl.puretree <> number ind
+binder 2856:2857 <> rg:37
+R2882:2884 Coq.Init.Datatypes <> fst def
+R2886:2887 tmpl.data_struct <> rg:37 var
+def 2901:2906 <> max_of
+R2920:2922 Coq.Init.Datatypes <> ::type_scope:x_'*'_x not
+R2914:2919 tmpl.puretree <> number ind
+R2923:2928 tmpl.puretree <> number ind
+binder 2909:2910 <> rg:38
+R2935:2937 Coq.Init.Datatypes <> snd def
+R2939:2940 tmpl.data_struct <> rg:38 var
+sec 2953:2959 <> NodeRep
+R2973:2977 VST.veric.semax <> VSTGS class
+R2979:2982 Coq.Init.Datatypes <> unit ind
+binder 2984:2985 <> Σ:39
+binder 2972:2985 <> VSTGS0:40
+R2989:2996 tmpl.data_struct <> flowintG class
+R2998:2999 tmpl.data_struct <> Σ:39 var
+binder 2988:2999 <> flowintG0:41
+R3003:3010 tmpl.data_struct <> nodesetG class
+R3012:3013 tmpl.data_struct <> Σ:39 var
+binder 3002:3013 <> nodesetG0:42
+R3017:3023 tmpl.data_struct <> keysetG class
+R3025:3026 tmpl.data_struct <> Σ:39 var
+binder 3016:3026 <> keysetG0:43
+def 3042:3045 <> inFP
+R3054:3058 iris_ora.logic.iprop <> gname def
+binder 3048:3051 <> γ_f:44
+R3066:3069 flows.flows <> Node def
+binder 3062:3062 <> n:45
+R3074:3078 VST.veric.mpred <> mpred def
+R3087:3091 iris.bi.interface <> ::bi_scope:'∃'_x_'..'_x_','_x not
+R3104:3112 iris.bi.interface <> ::bi_scope:'∃'_x_'..'_x_','_x not
+R3095:3098 stdpp.gmap <> gset def
+R3100:3103 flows.flows <> Node def
+binder 3092:3092 <> N:46
+R3168:3172 iris.bi.interface <> ::bi_scope:x_'∧'_x not
+R3114:3116 iris_ora.logic.own <> own def
+R3127:3137 tmpl.data_struct <> nodeset_inG meth
+R3141:3144 tmpl.data_struct <> γ_f:44 var
+R3152:3154 Coq.ssr.ssreflect <> ::core_scope:x_':'_x not
+R3155:3164 tmpl.data_struct <> gset_authR canonstruc
+R3147:3150 iris.algebra.auth <> :::'◯'_x not
+R3151:3151 tmpl.data_struct <> N:46 var
+R3173:3175 iris.bi.interface <> ::bi_scope:'⌜'_x_'⌝' not
+R3183:3185 iris.bi.interface <> ::bi_scope:'⌜'_x_'⌝' not
+R3177:3181 stdpp.base <> ::stdpp_scope:x_'∈'_x not
+R3176:3176 tmpl.data_struct <> n:45 var
+R3182:3182 tmpl.data_struct <> N:46 var
+rec 3195:3201 <> NodeRep
+proj 3219:3222 <> node
+proj 3382:3405 <> node_rep_R_valid_pointer
+proj 3476:3498 <> node_rep_R_pointer_null
+proj 3580:3588 <> node_size
+R3230:3234 Coq.Unicode.Utf8_core <> ::type_scope:x_'→'_x not
+R3226:3229 flows.flows <> Node def
+R3263:3267 Coq.Unicode.Utf8_core <> ::type_scope:x_'→'_x not
+R3236:3254 tmpl.flows_ora <> multiset_flowint_ur canonstruc
+R3256:3258 tmpl.data_struct <> Key def
+R3276:3280 Coq.Unicode.Utf8_core <> ::type_scope:x_'→'_x not
+R3268:3271 stdpp.gmap <> gset def
+R3273:3275 tmpl.data_struct <> Key def
+R3281:3285 VST.veric.mpred <> mpred def
+R3408:3414 stdpp.base <> ::type_scope:'forall'_x_'..'_x_','_x not
+R3422:3423 stdpp.base <> ::type_scope:'forall'_x_'..'_x_','_x not
+binder 3415:3415 <> n:49
+binder 3417:3419 <> I_n:50
+binder 3421:3421 <> C:51
+R3436:3441 iris.bi.interface <> ::stdpp_scope:x_'-∗'_x not
+R3424:3427 tmpl.data_struct <> node:48 meth
+R3435:3435 tmpl.data_struct <> C:51 var
+R3431:3433 tmpl.data_struct <> I_n:50 var
+R3429:3429 tmpl.data_struct <> n:49 var
+R3442:3454 VST.veric.expr <> valid_pointer def
+R3457:3466 tmpl.data_struct <> pointer_of def
+R3468:3468 tmpl.data_struct <> n:49 var
+R3501:3507 stdpp.base <> ::type_scope:'forall'_x_'..'_x_','_x not
+R3515:3516 stdpp.base <> ::type_scope:'forall'_x_'..'_x_','_x not
+binder 3508:3508 <> n:53
+binder 3510:3512 <> I_n:54
+binder 3514:3514 <> C:55
+R3529:3534 iris.bi.interface <> ::stdpp_scope:x_'-∗'_x not
+R3517:3520 tmpl.data_struct <> node:48 meth
+R3528:3528 tmpl.data_struct <> C:55 var
+R3524:3526 tmpl.data_struct <> I_n:54 var
+R3522:3522 tmpl.data_struct <> n:53 var
+R3535:3537 iris.bi.interface <> ::bi_scope:'⌜'_x_'⌝' not
+R3571:3573 iris.bi.interface <> ::bi_scope:'⌜'_x_'⌝' not
+R3538:3555 VST.veric.val_lemmas <> is_pointer_or_null def
+R3558:3567 tmpl.data_struct <> pointer_of def
+R3569:3569 tmpl.data_struct <> n:53 var
+R3591:3593 Coq.Init.Datatypes <> nat ind
+inst 3616:3630 <> inFP_persistent
+binder 3632:3635 <> γ_f:58
+binder 3637:3637 <> n:59
+R3640:3649 iris.bi.derived_connectives <> Persistent class
+R3652:3655 tmpl.data_struct <> inFP def
+R3657:3660 tmpl.data_struct <> γ_f:58 var
+R3662:3662 tmpl.data_struct <> n:59 var
+R3681:3699 iris.bi.derived_laws bi exist_persistent inst
+R3681:3699 iris.bi.derived_laws bi exist_persistent inst
+R3722:3738 iris.bi.derived_laws bi and_persistent inst
+R3722:3738 iris.bi.derived_laws bi and_persistent inst
+R3749:3767 iris_ora.logic.own <> own_core_persistent inst
+R3749:3767 iris_ora.logic.own <> own_core_persistent inst
+R3779:3813 iris.algebra.auth <> auth_frag_core_id inst
+R3779:3813 iris.algebra.auth <> auth_frag_core_id inst
+R3850:3856 tmpl.data_struct NodeRep <> sec
+inst 3879:3887 <> CompSpecs
+R3891:3899 VST.veric.compspecs <> compspecs class
+R3917:3920 tmpl.giveup_template <> prog def
+def 3943:3947 <> Vprog
+R3951:3958 VST.veric.mpred <> varspecs def
+R3974:3977 tmpl.giveup_template <> prog def

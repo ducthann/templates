@@ -1,0 +1,107 @@
+DIGEST 60b3a6a297e26a8ae8e762b26df34b4e
+Ftmpl.keyset_ra_ora
+R15:29 flows.keyset_ra <> <> lib
+R61:63 iris_ora.algebra.ora <> <> lib
+R82:87 iris.algebra.cmra <> validN def
+R117:121 iris.algebra.cmra <> valid def
+R149:150 iris.algebra.cmra <> op def
+R180:184 iris.algebra.cmra <> pcore def
+sec 205:213 <> keyset_ra
+binder 227:227 <> K:1
+R239:247 stdpp.countable <> Countable class
+R249:249 tmpl.keyset_ra_ora <> K:1 var
+binder 239:249 <> H:3
+R254:263 stdpp.base <> EqDecision abbrev
+R265:265 tmpl.keyset_ra_ora <> K:1 var
+binder 254:265 <> EqDecision1:4
+inst 286:300 <> keyset_ra_order
+R303:310 iris_ora.algebra.ora <> OraOrder class
+R313:317 flows.keyset_ra <> prodT ind
+R324:324 tmpl.keyset_ra_ora <> keyset_ra.K var
+R344:348 flows.keyset_ra <> prodT ind
+R355:355 tmpl.keyset_ra_ora <> keyset_ra.K var
+binder 339:339 <> a:5
+binder 341:341 <> b:6
+R367:370 Coq.Init.Logic <> ::type_scope:x_'\/'_x not
+R363:365 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R362:362 tmpl.keyset_ra_ora <> a:5 var
+R366:366 tmpl.keyset_ra_ora <> b:6 var
+R372:374 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R371:371 tmpl.keyset_ra_ora <> b:6 var
+R375:381 flows.keyset_ra <> prodTop constr
+prf 392:408 <> Increasing_key_ra
+R412:418 stdpp.base <> ::type_scope:'forall'_x_'..'_x_','_x not
+R420:421 stdpp.base <> ::type_scope:'forall'_x_'..'_x_','_x not
+binder 419:419 <> a:7
+R434:438 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R422:431 iris_ora.algebra.ora <> Increasing class
+R433:433 tmpl.keyset_ra_ora <> a:7 var
+R445:448 Coq.Init.Logic <> ::type_scope:x_'\/'_x not
+R440:442 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R439:439 tmpl.keyset_ra_ora <> a:7 var
+R443:444 iris.algebra.cmra <> ε def
+R450:452 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R449:449 tmpl.keyset_ra_ora <> a:7 var
+R453:459 flows.keyset_ra <> prodTop constr
+R511:512 iris.algebra.cmra <> ε def
+R511:512 iris.algebra.cmra <> ε def
+R529:536 stdpp.base <> right_id def
+R529:536 stdpp.base <> right_id def
+R529:536 stdpp.base <> right_id def
+R623:629 stdpp.base <> left_id def
+R623:629 stdpp.base <> left_id def
+R623:629 stdpp.base <> left_id def
+def 776:794 <> keyset_ra_ora_mixin
+R798:806 iris_ora.algebra.ora <> DORAMixin rec
+R808:812 flows.keyset_ra <> prodT ind
+R881:897 tmpl.keyset_ra_ora <> Increasing_key_ra thm
+R881:897 tmpl.keyset_ra_ora <> Increasing_key_ra thm
+R881:897 tmpl.keyset_ra_ora <> Increasing_key_ra thm
+R1032:1038 flows.keyset_ra <> prodBot constr
+R1032:1038 flows.keyset_ra <> prodBot constr
+R1084:1093 Coq.Classes.RelationClasses <> Transitive class
+R1333:1337 iris.algebra.cmra <> pcore def
+R1457:1463 flows.keyset_ra <> prodBot constr
+R1457:1463 flows.keyset_ra <> prodBot constr
+R1457:1463 flows.keyset_ra <> prodBot constr
+R1457:1463 flows.keyset_ra <> prodBot constr
+def 1570:1575 <> KsetRA
+R1580:1590 iris_ora.algebra.ora <> discreteOra abbrev
+R1593:1597 flows.keyset_ra <> prodT ind
+R1604:1604 tmpl.keyset_ra_ora <> keyset_ra.K var
+R1593:1597 flows.keyset_ra <> prodT ind
+R1604:1604 tmpl.keyset_ra_ora <> keyset_ra.K var
+R1608:1626 tmpl.keyset_ra_ora <> keyset_ra_ora_mixin def
+R1593:1597 flows.keyset_ra <> prodT ind
+R1604:1604 tmpl.keyset_ra_ora <> keyset_ra.K var
+R1608:1626 tmpl.keyset_ra_ora <> keyset_ra_ora_mixin def
+R1593:1597 flows.keyset_ra <> prodT ind
+R1604:1604 tmpl.keyset_ra_ora <> keyset_ra.K var
+R1608:1626 tmpl.keyset_ra_ora <> keyset_ra_ora_mixin def
+R1608:1626 tmpl.keyset_ra_ora <> keyset_ra_ora_mixin def
+inst 1646:1664 <> keyset_ora_discrete
+R1668:1678 iris_ora.algebra.ora <> OraDiscrete class
+R1681:1685 flows.keyset_ra <> prodT ind
+R1692:1692 tmpl.keyset_ra_ora <> keyset_ra.K var
+R1714:1734 iris_ora.algebra.ora <> discrete_ora_discrete inst
+R1714:1734 iris_ora.algebra.ora <> discrete_ora_discrete inst
+def 1764:1771 <> keysetUR
+R1775:1778 iris_ora.algebra.ora <> uora rec
+R1783:1786 iris_ora.algebra.ora <> Uora abbrev
+R1789:1793 flows.keyset_ra <> prodT ind
+R1800:1800 tmpl.keyset_ra_ora <> keyset_ra.K var
+R1789:1793 flows.keyset_ra <> prodT ind
+R1800:1800 tmpl.keyset_ra_ora <> keyset_ra.K var
+R1805:1830 flows.keyset_ra <> prod_ucmra_mixin thm
+R1838:1838 tmpl.keyset_ra_ora <> keyset_ra.K var
+R1789:1793 flows.keyset_ra <> prodT ind
+R1800:1800 tmpl.keyset_ra_ora <> keyset_ra.K var
+R1805:1830 flows.keyset_ra <> prod_ucmra_mixin thm
+R1838:1838 tmpl.keyset_ra_ora <> keyset_ra.K var
+R1789:1793 flows.keyset_ra <> prodT ind
+R1800:1800 tmpl.keyset_ra_ora <> keyset_ra.K var
+R1805:1830 flows.keyset_ra <> prod_ucmra_mixin thm
+R1838:1838 tmpl.keyset_ra_ora <> keyset_ra.K var
+R1805:1830 flows.keyset_ra <> prod_ucmra_mixin thm
+R1838:1838 tmpl.keyset_ra_ora <> keyset_ra.K var
+R1847:1855 tmpl.keyset_ra_ora keyset_ra <> sec

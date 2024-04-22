@@ -1,10 +1,9 @@
 Require Import VST.concurrency.conclib.
 Require Import VST.floyd.proofauto.
 Require Import VST.atomics.general_locks.
-Require Import bst.giveup_template. (* giveup_template.c *)
-Require Import bst.puretree.
+Require Import templ.giveup_template. (* giveup_template.c *)
+Require Import templ.puretree.
 (* Require Import bst.data_struct. *)
-Require Export bst.giveup_lib.
 Require Import VST.atomics.verif_lock_atomic.
 Require Import VST.floyd.library.
 
@@ -18,7 +17,7 @@ Proof. unfold Inhabitant; apply empty. Defined.
 Proof. unfold Inhabitant; apply Pos_Infinity. Defined.
 
 Section give_up_specs.
-  Context {N: NodeRep}.
+  Context {N: Node}.
 
 Definition nodebox_rep (g : gname) (g_root : gname) (sh : share) (lock: val) (nb : val) :=
   EX (np: val) (lsh : share),

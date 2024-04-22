@@ -1,0 +1,140 @@
+DIGEST 9026205667a71c761ed1e74900b0aaf1
+Ftmpl.flows_ora
+R60:70 flows.flows <> <> lib
+R88:107 flows.multiset_flows <> <> lib
+R139:141 iris_ora.algebra.ora <> <> lib
+R160:165 iris.algebra.cmra <> validN def
+R195:199 iris.algebra.cmra <> valid def
+R228:229 iris.algebra.cmra <> op def
+R259:263 iris.algebra.cmra <> pcore def
+inst 292:306 <> Node_EqDecision
+R310:319 stdpp.base <> EqDecision abbrev
+R321:324 flows.flows <> Node def
+R343:352 stdpp.base <> RelDecision class
+R355:362 stdpp.base <> Decision class
+R419:424 compcert.common.Values Val eq def
+R419:424 compcert.common.Values Val eq def
+R433:438 compcert.common.Values Val eq def
+R433:438 compcert.common.Values Val eq def
+R447:452 compcert.common.Values Val eq def
+R447:452 compcert.common.Values Val eq def
+inst 477:490 <> val_EqDecision
+R494:503 stdpp.base <> EqDecision abbrev
+R505:507 compcert.common.Values <> val ind
+R526:535 stdpp.base <> RelDecision class
+R538:545 stdpp.base <> Decision class
+R566:571 compcert.common.Values Val eq def
+R566:571 compcert.common.Values Val eq def
+inst 597:610 <> Node_countable
+R614:622 stdpp.countable <> Countable class
+R624:627 flows.flows <> Node def
+R644:647 flows.flows <> Node def
+sec 669:673 <> flows
+binder 688:694 <> flowdom:1
+R706:708 flows.ccm <> CCM class
+R710:716 tmpl.flows_ora <> flowdom:1 var
+binder 706:716 <> H:2
+inst 751:761 <> flows_order
+R765:772 iris_ora.algebra.ora <> OraOrder class
+R774:781 flows.flows <> flowintT ind
+R796:803 flows.flows <> flowintT ind
+binder 791:791 <> a:3
+binder 793:793 <> b:4
+R814:817 Coq.Init.Logic <> ::type_scope:x_'\/'_x not
+R810:812 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R809:809 tmpl.flows_ora <> a:3 var
+R813:813 tmpl.flows_ora <> b:4 var
+R819:821 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R818:818 tmpl.flows_ora <> b:4 var
+R822:829 flows.flows <> intUndef constr
+prf 864:879 <> Increasing_flows
+R883:889 stdpp.base <> ::type_scope:'forall'_x_'..'_x_','_x not
+R891:892 stdpp.base <> ::type_scope:'forall'_x_'..'_x_','_x not
+binder 890:890 <> a:5
+R905:909 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R893:902 iris_ora.algebra.ora <> Increasing class
+R904:904 tmpl.flows_ora <> a:5 var
+R916:919 Coq.Init.Logic <> ::type_scope:x_'\/'_x not
+R911:913 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R910:910 tmpl.flows_ora <> a:5 var
+R914:915 iris.algebra.cmra <> ε def
+R921:923 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R920:920 tmpl.flows_ora <> a:5 var
+R924:931 flows.flows <> intUndef constr
+R982:983 iris.algebra.cmra <> ε def
+R982:983 iris.algebra.cmra <> ε def
+R999:1006 stdpp.base <> right_id def
+R999:1006 stdpp.base <> right_id def
+R999:1006 stdpp.base <> right_id def
+R1089:1095 stdpp.base <> left_id def
+R1089:1095 stdpp.base <> left_id def
+R1089:1095 stdpp.base <> left_id def
+R1155:1170 flows.flows <> intComp_undef_op thm
+R1155:1170 flows.flows <> intComp_undef_op thm
+R1155:1170 flows.flows <> intComp_undef_op thm
+def 1195:1209 <> flows_ora_mixin
+R1213:1221 iris_ora.algebra.ora <> DORAMixin rec
+R1223:1230 flows.flows <> flowintT ind
+R1308:1323 tmpl.flows_ora <> Increasing_flows thm
+R1308:1323 tmpl.flows_ora <> Increasing_flows thm
+R1308:1323 tmpl.flows_ora <> Increasing_flows thm
+R1637:1652 flows.flows <> intComp_undef_op thm
+R1637:1652 flows.flows <> intComp_undef_op thm
+R1767:1771 iris.algebra.cmra <> pcore def
+R1774:1786 flows.flows <> flowintRAcore inst
+R1871:1875 iris.algebra.cmra <> ::stdpp_scope:x_'⋅'_x not
+R1865:1867 flows.flows <> int constr
+R1871:1875 iris.algebra.cmra <> ::stdpp_scope:x_'⋅'_x not
+R1865:1867 flows.flows <> int constr
+R1973:1988 flows.flows <> intComp_undef_op thm
+R1973:1988 flows.flows <> intComp_undef_op thm
+R1973:1988 flows.flows <> intComp_undef_op thm
+R2108:2123 flows.flows <> intComp_undef_op thm
+R2108:2123 flows.flows <> intComp_undef_op thm
+R2108:2123 flows.flows <> intComp_undef_op thm
+def 2203:2209 <> flowsRA
+R2214:2224 iris_ora.algebra.ora <> discreteOra abbrev
+R2226:2233 flows.flows <> flowintT ind
+R2226:2233 flows.flows <> flowintT ind
+R2235:2249 tmpl.flows_ora <> flows_ora_mixin def
+R2226:2233 flows.flows <> flowintT ind
+R2235:2249 tmpl.flows_ora <> flows_ora_mixin def
+R2226:2233 flows.flows <> flowintT ind
+R2235:2249 tmpl.flows_ora <> flows_ora_mixin def
+R2235:2249 tmpl.flows_ora <> flows_ora_mixin def
+inst 2270:2287 <> flows_ora_discrete
+R2291:2301 iris_ora.algebra.ora <> OraDiscrete class
+R2303:2310 flows.flows <> flowintT ind
+R2332:2352 iris_ora.algebra.ora <> discrete_ora_discrete inst
+R2332:2352 iris_ora.algebra.ora <> discrete_ora_discrete inst
+def 2387:2395 <> flowintUR
+R2399:2402 iris_ora.algebra.ora <> uora rec
+R2407:2410 iris_ora.algebra.ora <> Uora abbrev
+R2412:2419 flows.flows <> flowintT ind
+R2412:2419 flows.flows <> flowintT ind
+R2421:2439 flows.flows <> flowint_ucmra_mixin thm
+R2412:2419 flows.flows <> flowintT ind
+R2421:2439 flows.flows <> flowint_ucmra_mixin thm
+R2412:2419 flows.flows <> flowintT ind
+R2421:2439 flows.flows <> flowint_ucmra_mixin thm
+R2421:2439 flows.flows <> flowint_ucmra_mixin thm
+R2446:2450 tmpl.flows_ora flows <> sec
+sec 2462:2474 <> multiset_flow
+R2487:2495 stdpp.countable <> Countable class
+binder 2497:2497 <> K:6
+binder 2487:2497 <> H:8
+def 2515:2524 <> K_multiset
+R2529:2533 flows.ccm <> nzmap rec
+R2537:2539 Coq.Init.Datatypes <> nat ind
+R2535:2535 tmpl.flows_ora <> multiset_flow.K var
+inst 2560:2573 <> K_multiset_ccm
+R2577:2579 flows.ccm <> CCM class
+R2581:2590 tmpl.flows_ora <> K_multiset def
+R2595:2602 flows.ccm <> lift_ccm inst
+R2606:2608 Coq.Init.Datatypes <> nat ind
+R2604:2604 tmpl.flows_ora <> multiset_flow.K var
+def 2640:2658 <> multiset_flowint_ur
+R2662:2665 iris_ora.algebra.ora <> uora rec
+R2671:2679 tmpl.flows_ora <> flowintUR canonstruc
+R2681:2690 tmpl.flows_ora <> K_multiset def
+R2699:2711 tmpl.flows_ora multiset_flow <> sec
