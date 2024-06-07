@@ -7,15 +7,7 @@ Local Arguments valid _ _  !_ /.
 Local Arguments op _ _ _ !_ /.
 Local Arguments pcore _ _ !_ /.
 
-Global Instance Node_EqDecision:  EqDecision Node.
-Proof.
-  unfold EqDecision, Decision.
-  intros.
-  decide equality. decide equality.
-  apply Val.eq. apply Val.eq. apply Val.eq.
-Qed.
-
-Global Instance val_EqDecision:  EqDecision val.
+Global Instance val_EqDecision: EqDecision Node.
 Proof.
   unfold EqDecision, Decision.
   intros.
