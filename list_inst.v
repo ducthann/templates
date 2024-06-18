@@ -72,8 +72,8 @@ Class NodeRep : Type := {
       ⌜and (Z.le Int.min_signed x) (Z.le x Int.max_signed) /\
        is_pointer_or_null (next !!! 0)  /\
           (tc_val (tptr Tvoid) v) ∧ C = {[x := v]} ∧
-        (forall y, in_outset _ _ _ y In (next !!! 0) <-> Z.lt x y ∧ in_inset _ _ _ y In n) ∧
-        (forall y, in_outsets _ _ _ y In -> in_outset _ _ _ y In (next !!! 0)) ⌝ ∧
+        (forall y, in_outset _ _ Key y In (next !!! 0) <-> Z.lt x y ∧ in_inset _ _ Key y In n) ∧
+        (forall y, in_outsets _ _ Key y In -> in_outset _ _ Key y In (next !!! 0)) ⌝ ∧
        data_at Ews t_struct_list (Vint (Int.repr x), (v, (next !!! 0))) n ∗
        malloc_token Ews t_struct_list n); node_size := 1}.
 (* ; node_rep_R_valid_pointer }. *)
@@ -106,7 +106,7 @@ Definition findnext_spec :=
                 (Int.min_signed ≤ x ≤ Int.max_signed)%Z
           (*; is_pointer_or_null pa; is_pointer_or_null pb*) )
           PARAMS (p; n; Vint (Int.repr x)) GLOBALS (gv)
-          SEP (node p Ip Cp nextp ∗ ⌜p <> nullval /\ in_inset _ _ _ x Ip p⌝ ∧
+          SEP (node p Ip Cp nextp ∗ ⌜p <> nullval /\ in_inset _ _ Key x Ip p⌝ ∧
                (* field_at sh (t_struct_tree) [StructField _t] r.1.1.1 p; *)
                data_at sh (tptr tvoid) n_pt n)
   POST [ tint ]
@@ -117,8 +117,8 @@ Definition findnext_spec :=
                end)
         LOCAL (temp ret_temp (enums stt))
         SEP (match stt with
-               | F | NF => ⌜¬in_outsets _ _ _ x Ip⌝ ∧ data_at sh (tptr tvoid) n_pt n
-               | NN => ⌜in_outset _ _ _ x Ip next⌝ ∧ data_at sh (tptr tvoid) next n
+               | F | NF => ⌜¬in_outsets _ _ Key x Ip⌝ ∧ data_at sh (tptr tvoid) n_pt n
+               | NN => ⌜in_outset _ _ Key x Ip next⌝ ∧ data_at sh (tptr tvoid) next n
              end ∗
                node p Ip Cp nextp).
 
@@ -138,8 +138,8 @@ Proof.
     rewrite -> if_false; auto.
     Exists x0 v0 .
     entailer !.
-    apply (H8 x). split. lia.
-    auto.
+    specialize (H8 x).
+    set_solver.
   - (* if (_x > _y) *)
     forward_if.
     repeat forward.
@@ -195,12 +195,13 @@ Definition list_to_gmap (l : list Node) : gmap nat Node :=
 
 (*  Ip : @flowintT _ K_multiset_ccm  _ _ *)
 
+Check contextualLeq _ .
 
 
 Definition insertOp_spec :=
   DECLARE _insertOp
     WITH x: Z, v: val, stt: Z, p: Node, tp: val, l: val, dl: val,
-                  Ip : @flowintT _ K_multiset_ccm  _ _,
+                  Ip : flowintT,
                     Cp : (gmap Key data_struct.Value),
                      (* pnext : gmap nat Node, *)
                       next0: list Node, next: list Node,
@@ -208,9 +209,12 @@ Definition insertOp_spec :=
   PRE [ tptr (tptr t_struct_list), tint, tptr tvoid, tint, tptr (struct_dlist)]
   PROP (repable_signed x; is_pointer_or_null v; (*node_size = length ((gmap_to_node_list pnext)); *)
         length next = node_size;
+        in_inset _ _ Key x Ip tp; ¬ in_outsets _ _ Key x Ip; 
+        @flows.int (@multiset_flows.K_multiset Key Z.eq_dec Z_countable) K_multiset_ccm _  _
+          {| infR := {[ tp := 0%CCM ]}; outR := <<[ Znth 0 next0 := 0%CCM ]>> ∅  |} = Ip; 
         (* is_pointer_or_null (Znth 0 (gmap_to_node_list pnext)); *)
-        is_pointer_or_null (Znth 0 next);
-        tp = nullval)
+        is_pointer_or_null (Znth 0 next) (* ;
+        tp = nullval*) )
   PARAMS (p; Vint (Int.repr x); v; Vint (Int.repr stt); l)
   GLOBALS (gv)
   SEP (mem_mgr gv; node tp Ip Cp (list_to_gmap next0);
@@ -221,11 +225,12 @@ Definition insertOp_spec :=
        data_at Ews (tarray (tptr tvoid) (Zlength next)) next dl
        )
   POST[ tvoid ]
-  ∃ (pnt : Node),
+  ∃ (pnt : Node) (Ip1 Ip2: flowintT),
   PROP (pnt <> nullval)
   LOCAL ()
-  SEP (mem_mgr gv; node pnt Ip (<[x := v]> Cp) (list_to_gmap next);
-       node tp Ip Cp (list_to_gmap next0);
+  SEP (mem_mgr gv; node pnt Ip1 ({[x := v]}) (list_to_gmap next);
+       node tp Ip2 Cp (list_to_gmap next0);
+       ⌜contextualLeq _ Ip (Ip2 ⋅ Ip1)⌝;
        field_at Tsh struct_dlist (DOT _list) dl l;
        data_at Ews (tptr t_struct_list) pnt p;
        (*data_at Ews (tarray (tptr tvoid) (Zlength (gmap_to_node_list pnext))) (gmap_to_node_list pnext) dl*)
@@ -233,118 +238,133 @@ Definition insertOp_spec :=
 
   ).
 
-
-
 Definition Gprog : funspecs :=
     ltac:(with_library prog [acquire_spec; release_spec; makelock_spec;
      surely_malloc_spec; insertOp_spec (* ; traverse_spec; insert_spec; treebox_new_spec*) ]).
 (* Proving insertOp satisfies spec *)
 
+Check default.
+  
 Lemma insertOp: semax_body Vprog Gprog f_insertOp insertOp_spec.
 Proof.
   start_function.
   forward_call (t_struct_list, gv).
   unfold node, my_specific_tree_rep.
   Intros new_node.
-  clear H5.
   assert (tp <> nullval). admit.
   rewrite -> if_false; auto.
-  forward.
-  forward.
-  forward.
-  forward.
-  entailer !.
-  rewrite Zlength_correct.
-  simpl in *.
-  rewrite -> H3. lia.
-  forward.
-  forward.
-  assert_PROP(new_node ≠ nullval). entailer !.
-  Exists new_node.
-  unfold node, my_specific_tree_rep.
-  rewrite if_false; auto.
   Intros x0 v0.
-  assert (list_to_gmap_aux next 0 !!! 0 = Znth 0 next).
-  {
-    unfold Znth.
-    destruct next as [| x' xs'].
-    - simpl. auto.
-    - rewrite lookup_total_insert. auto.
-  }
-  rewrite H13.
-  entailer !.
-  Exists x v.
-  rewrite -> if_false; auto.
-  Exists x0 v0.
-  entailer !.
-  entailer !.
-  split. admit.
-  split.
-  intros.
-  split.
-  - intros.
-    split.
-    admit.
-    
-  - 
-    intros.
-    specialize (H5 y).
-    destruct H5.
-    unfold in_outsets in H5. set_solver.
-  - intros.
-    specialize (H5 y).
-    destruct H5.
-    destruct H19.
-    set_solver.
-  - intros.
-    set_solver.
-  Qed.
-
-Lemma insertOp: semax_body Vprog Gprog f_insertOp insertOp_spec.
-Proof.
-  start_function.
-  forward_call (t_struct_list, gv).
-  unfold node, my_specific_tree_rep.
-  Intros new_node.
-  subst.
-  rewrite -> if_true; auto.
   forward.
   forward.
   forward.
   forward.
-  entailer !.
   rewrite Zlength_correct.
   simpl in *.
-  rewrite -> H3. lia.
+  rewrite -> H3.
+  entailer !.
   forward.
   forward.
-  assert_PROP(new_node ≠ nullval). entailer !.
+  unfold in_outsets in H5.
+  assert (forall n, ¬ in_outset val_EqDecision Node_countable Key x Ip n) as allNot. set_solver.
+  assert (Z.le x x0) as Hle.
+  { apply Ztac.elim_concl_le.
+    intros Hlt.
+    assert (Z.lt x0 x ∧ in_inset val_EqDecision Node_countable Key x Ip tp) as Hcm; auto.
+    specialize (H13 x).
+    apply H13 in Hcm.
+    set_solver.
+  }
+  assert_PROP (new_node <> nullval). entailer !.
+  assert (list_to_gmap_aux next 0 !!! 0 = Znth 0 next /\
+            list_to_gmap_aux next0 0 !!! 0 = Znth 0 next0) as (Hznth & Hznth0).
+  { split; unfold Znth; [destruct next as [| x' xs'] | destruct next0 as [| x' xs']];
+      simpl; auto; rewrite lookup_total_insert; auto.
+  }
   Exists new_node.
-  unfold node, my_specific_tree_rep.
+  Exists (@flows.int (@multiset_flows.K_multiset Key Z.eq_dec Z_countable) K_multiset_ccm _  _
+                     {| infR := {[ new_node := 0%CCM ]}; outR := <<[ Znth 0 next := 0%CCM ]>> ∅ |}).
+  Exists Ip.
+  rewrite / node / my_specific_tree_rep.
+  rewrite if_false; auto.
   rewrite if_false; auto.
   entailer !.
-  Exists x v.
-  assert (list_to_gmap_aux next 0 !!! 0 = Znth 0 next).
-  {
-    unfold Znth.
-    destruct next as [| x' xs'].
-    - simpl. auto.
-    - rewrite lookup_total_insert. auto.
-  }
-  rewrite H18.
+  Exists x v x0 v0.
   entailer !.
-  split.
-  intros.
-  split.
-  - intros.
-    specialize (H5 y).
-    destruct H5.
-    unfold in_outsets in H5. set_solver.
-  - intros.
-    specialize (H5 y).
-    destruct H5.
-    destruct H19.
-    set_solver.
-  - intros.
-    set_solver.
-  Qed.
+  rewrite Hznth.
+  split; auto.
+  rewrite /in_outset /in_inset /out_map /inf /out Hznth0 /= nzmap_lookup_total_insert
+    in H13, H14.
+  intros y.
+  - split.
+    + intros H_in_out.
+      rewrite /in_outset /in_inset /out_map /inf /out /= nzmap_lookup_total_insert in H_in_out.
+      split.
+      ++ specialize (H13 y).
+         apply H13 in H_in_out. lia.
+      ++ rewrite /in_outset /in_inset /out_map /inf /out /= lookup_insert. auto.
+    + intros (Hlt & H_in_inset).
+      rewrite /in_outset /in_inset /out_map /inf /out /= lookup_insert in H_in_inset.
+      rewrite /in_outset /in_inset /out_map /inf /out /= nzmap_lookup_total_insert.
+      auto.
+
+      Check contextualLeq.
+  - rewrite Hznth. entailer !.
+    iIntros "_".
+    iPureIntro.
+    unfold contextualLeq.
+    repeat split; simpl.
+    set (Ip := @flows.int (@multiset_flows.K_multiset Key Z.eq_dec Z_countable) K_multiset_ccm _  _
+          {| infR := {[ tp := 0%CCM ]}; outR := <<[ Znth 0 next0 := 0%CCM ]>> ∅  |}).
+    assert (✓ Ip). admit.
+    assert (out Ip new_node = 0%CCM). admit. (*not true*)
+    + set_solver.
+    + intros Htp.
+      set_solver.
+    + apply intValid_composable.
+      (*
+        intComposable (flows.int {| infR := {[tp := 0%CCM]}; outR := <<[ Znth 0 next0 := 0%CCM ]>> ∅ |})
+    (flows.int {| infR := {[new_node := 0%CCM]}; outR := <<[ Znth 0 next := 0%CCM ]>> ∅ |})
+
+       *)
+      unfold intComposable.
+      repeat split; simpl.
+      ** set_solver.
+      ** intros. set_solver.
+      ** set_solver.
+      ** set_solver.
+      ** rewrite /flowint_dom /= dom_singleton_L.
+         rewrite /dom /flowint_dom.
+         assert (tp <> new_node). admit.
+         admit.
+      ** apply map_Forall_lookup.
+         intros ? ? Hix.
+         apply elem_of_dom_2 in Hix.
+         rewrite dom_singleton in Hix.
+         rewrite elem_of_singleton in Hix. subst i.
+         rewrite /inf /inf_map /out /out_map. simpl.
+         admit.
+      ** apply map_Forall_lookup.
+         intros ? ? Hix.
+         apply elem_of_dom_2 in Hix.
+         admit.
+    + rewrite /flowint_dom /inf_map /= dom_singleton_L /=.
+      rewrite intComp_dom. set_solver.
+      apply intValid_composable.
+      unfold intComposable .
+      admit.
+    + intros n1 Hn1.
+      rewrite /flowint_dom /inf_map /= in Hn1.
+      rewrite /inf /inf_map.
+      Search dom  singleton.
+      rewrite dom_singleton in Hn1.
+      Search singleton "∈".
+      apply elem_of_singleton_1 in Hn1. subst n1.
+      rewrite lookup_insert. simpl.
+      admit.
+    + intros n1 Hn1.
+      rewrite /flowint_dom /inf_map /= in Hn1.
+      rewrite /inf /inf_map.
+
+    Admitted.
+
+
