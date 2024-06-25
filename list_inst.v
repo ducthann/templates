@@ -62,23 +62,24 @@ Class NodeRep : Type := {
 
 #[local] Program Instance my_specific_tree_rep : NodeRep := {
   node := fun (n : Node) (In : @multiset_flowint_ur Key _ _) (C: gmap Key data_struct.Value)
-            (next:  gmap nat Node) =>
+            (next:  gmap nat val) =>
   if eq_dec n nullval
   then ⌜∀ y : Key, ¬ in_outsets val_EqDecision Node_countable Key y In ∧
                      ¬ ∃ n1 : Node, n1 ≠ n ∧ in_inset val_EqDecision Node_countable Key y In n1 ∧
                      C = ∅⌝ ∧ emp
   else
-  (∃ (x : Z) (v : val),
+  (∃ (x : Z) (v : val) (n' : Node),
       ⌜and (Z.le Int.min_signed x) (Z.le x Int.max_signed) /\
        is_pointer_or_null (next !!! 0)  /\
-          (tc_val (tptr Tvoid) v) ∧ C = {[x := v]} ∧
-        (forall y, in_outset _ _ Key y In (next !!! 0) <-> Z.lt x y ∧ in_inset _ _ Key y In n) ∧
-        (forall y, in_outsets _ _ Key y In -> in_outset _ _ Key y In (next !!! 0)) ⌝ ∧
+          (tc_val (tptr Tvoid) v) ∧ C = {[x := v]} ∧ dom (out_map In) = {[n']} ∧
+        (forall y, in_outset _ _ Key y In n' <-> Z.lt x y ∧ in_inset _ _ Key y In n) ∧
+        (forall y, in_outsets _ _ Key y In -> in_outset _ _ Key y In n') ⌝ ∧
        data_at Ews t_struct_list (Vint (Int.repr x), (v, (next !!! 0))) n ∗
        malloc_token Ews t_struct_list n); node_size := 1}.
 (* ; node_rep_R_valid_pointer }. *)
 Next Obligation.
-  intros n In Cn next. 
+  intros n In Cn next.
+  Check dom (out_map In).
   destruct (EqDec_val n nullval). 
   - simpl. rewrite e. auto.
   - rewrite if_false; auto. iIntros "H".
@@ -110,16 +111,16 @@ Definition findnext_spec :=
                (* field_at sh (t_struct_tree) [StructField _t] r.1.1.1 p; *)
                data_at sh (tptr tvoid) n_pt n)
   POST [ tint ]
-  ∃ (stt: enum), ∃ (n' next : Node),
+  ∃ (stt: enum), ∃ (n' next : val), ∃ (nnext : Node),
          PROP (match stt with
                | F | NF => (n' = p)
                | NN => (n' = next)
-               end)
+               end; dom (out_map Ip) = {[nnext]})
         LOCAL (temp ret_temp (enums stt))
         SEP (match stt with
                | F | NF => ⌜¬in_outsets _ _ Key x Ip⌝ ∧ data_at sh (tptr tvoid) n_pt n
-               | NN => ⌜in_outset _ _ Key x Ip next⌝ ∧ data_at sh (tptr tvoid) next n
-             end ∗
+               | NN => ⌜in_outset _ _ Key x Ip nnext⌝ ∧ data_at sh (tptr tvoid) next n
+             end;
                node p Ip Cp nextp).
 
 Lemma findNext: semax_body Vprog Gprog f_findNext findnext_spec.
@@ -133,41 +134,37 @@ Proof.
   forward.
   forward_if. (* if (_x < _y) *)
   - forward. forward. forward.
-    Exists NN (nextp !!! 0) (nextp !!! 0).
+    Exists NN (nextp !!! 0) (nextp !!! 0) n'.
     unfold node, my_specific_tree_rep.
     rewrite -> if_false; auto.
     Exists x0 v0 .
     entailer !.
-    specialize (H8 x).
+    specialize (H9 x).
     set_solver.
+    Exists n'. entailer !.
   - (* if (_x > _y) *)
     forward_if.
     repeat forward.
-    Exists NF p p.
+    Exists NF p p n'.
     entailer !.
-    specialize (H9 x).
-    specialize (H9 H7).
-    specialize (H8 x).
-    apply H8 in H9.
-    destruct H9. lia.
-    unfold node, my_specific_tree_rep.
+    apply (H10 x), (H9 x) in H7.
+    lia.
+    rewrite /node /my_specific_tree_rep.
     rewrite -> if_false; auto.
-    Exists x0 v0.
-    entailer !.
+    Exists x0 v0 n'. entailer !.
     (* x = y *)
     forward.
-    Exists F p p.
-    unfold node, my_specific_tree_rep.
+    Exists F p p n'.
+    rewrite /node /my_specific_tree_rep.
     rewrite -> if_false; auto.
-    Exists x0 v0.
+    Exists x0 v0 n'.
     entailer !.
-    assert (x = x0). lia.
-    subst x0.
-    specialize (H8 x).
-    specialize (H9 x).
-    apply H9 in H7.
-    apply H8 in H7. lia.
+    assert (x = x0). lia. subst x0.
+    apply (H10 x) in H7.
+    apply (H9 x) in H7.
+    lia.
 Qed.
+
 
 Definition surely_malloc_spec :=
   DECLARE _surely_malloc
@@ -202,7 +199,7 @@ Definition insertOp_spec :=
   DECLARE _insertOp
     WITH x: Z, v: val, stt: Z, p: Node, tp: val, l: val, dl: val,
                   Ip : flowintT,
-                    Cp : (gmap Key data_struct.Value),
+                    Cp : (gmap Key data_struct.Value), S : nzmap Z nat,
                      (* pnext : gmap nat Node, *)
                       next0: list Node, next: list Node,
                         sh: share, gv: globals
@@ -211,7 +208,7 @@ Definition insertOp_spec :=
         length next = node_size;
         in_inset _ _ Key x Ip tp; ¬ in_outsets _ _ Key x Ip; 
         @flows.int (@multiset_flows.K_multiset Key Z.eq_dec Z_countable) K_multiset_ccm _  _
-          {| infR := {[ tp := 0%CCM ]}; outR := <<[ Znth 0 next0 := 0%CCM ]>> ∅  |} = Ip; 
+          {|infR := {[ tp := S%CCM ]}; outR := <<[ Znth 0 next0 := S%CCM ]>> ∅ |} = Ip; 
         (* is_pointer_or_null (Znth 0 (gmap_to_node_list pnext)); *)
         is_pointer_or_null (Znth 0 next) (* ;
         tp = nullval*) )
@@ -254,6 +251,7 @@ Proof.
   assert (tp <> nullval). admit.
   rewrite -> if_false; auto.
   Intros x0 v0.
+  Check outR .
   forward.
   forward.
   forward.
@@ -262,6 +260,7 @@ Proof.
   simpl in *.
   rewrite -> H3.
   entailer !.
+  Intros n'.
   forward.
   forward.
   unfold in_outsets in H5.
@@ -270,9 +269,7 @@ Proof.
   { apply Ztac.elim_concl_le.
     intros Hlt.
     assert (Z.lt x0 x ∧ in_inset val_EqDecision Node_countable Key x Ip tp) as Hcm; auto.
-    specialize (H13 x).
-    apply H13 in Hcm.
-    set_solver.
+    apply (H14 x) in Hcm. set_solver.
   }
   assert_PROP (new_node <> nullval). entailer !.
   assert (list_to_gmap_aux next 0 !!! 0 = Znth 0 next /\
@@ -282,89 +279,170 @@ Proof.
   }
   Exists new_node.
   Exists (@flows.int (@multiset_flows.K_multiset Key Z.eq_dec Z_countable) K_multiset_ccm _  _
-                     {| infR := {[ new_node := 0%CCM ]}; outR := <<[ Znth 0 next := 0%CCM ]>> ∅ |}).
+                     {| infR := {[ new_node := S%CCM ]}; outR := <<[ tp := S%CCM ]>> ∅ |}).
   Exists Ip.
   rewrite / node / my_specific_tree_rep.
   rewrite if_false; auto.
   rewrite if_false; auto.
   entailer !.
-  Exists x v x0 v0.
+  Exists x v tp.
+  Exists x0 v0 n'.
   entailer !.
+  rewrite /in_outset /in_inset /out_map /inf /out /=.
   rewrite Hznth.
   split; auto.
-  rewrite /in_outset /in_inset /out_map /inf /out Hznth0 /= nzmap_lookup_total_insert
-    in H13, H14.
-  intros y.
-  - split.
-    + intros H_in_out.
-      rewrite /in_outset /in_inset /out_map /inf /out /= nzmap_lookup_total_insert in H_in_out.
-      split.
-      ++ specialize (H13 y).
-         apply H13 in H_in_out. lia.
-      ++ rewrite /in_outset /in_inset /out_map /inf /out /= lookup_insert. auto.
-    + intros (Hlt & H_in_inset).
-      rewrite /in_outset /in_inset /out_map /inf /out /= lookup_insert in H_in_inset.
-      rewrite /in_outset /in_inset /out_map /inf /out /= nzmap_lookup_total_insert.
-      auto.
-
-      Check contextualLeq.
-  - rewrite Hznth. entailer !.
-    iIntros "_".
-    iPureIntro.
-    unfold contextualLeq.
-    repeat split; simpl.
-    set (Ip := @flows.int (@multiset_flows.K_multiset Key Z.eq_dec Z_countable) K_multiset_ccm _  _
-          {| infR := {[ tp := 0%CCM ]}; outR := <<[ Znth 0 next0 := 0%CCM ]>> ∅  |}).
-    assert (✓ Ip). admit.
-    assert (out Ip new_node = 0%CCM). admit. (*not true*)
-    + set_solver.
-    + intros Htp.
+  rewrite /in_outset /in_inset /out_map /inf /out /= in H13, H14, H15.
+  rewrite /in_outset /in_inset /out_map /inf /out /=.
+  rewrite /in_outset /in_inset /out_map /inf /out /= in H4.
+  destruct (decide (S = 0%CCM)); subst.
+  - apply leibniz_equiv_iff in H13.
+    rewrite (nzmap_dom_insert_zero) in H13; auto.
+    (* contradiction *)
+    set_solver.
+  - apply leibniz_equiv_iff in H13.
+    rewrite (nzmap_dom_insert_nonzero) in H13; auto.
+    assert (Znth 0 next0 = n') as Hn'. set_solver.
+    split.
+    + rewrite <- leibniz_equiv_iff.
+      rewrite nzmap_dom_insert_nonzero; auto.
       set_solver.
-    + apply intValid_composable.
-      (*
-        intComposable (flows.int {| infR := {[tp := 0%CCM]}; outR := <<[ Znth 0 next0 := 0%CCM ]>> ∅ |})
-    (flows.int {| infR := {[new_node := 0%CCM]}; outR := <<[ Znth 0 next := 0%CCM ]>> ∅ |})
-
-       *)
-      unfold intComposable.
-      repeat split; simpl.
-      ** set_solver.
-      ** intros. set_solver.
-      ** set_solver.
-      ** set_solver.
-      ** rewrite /flowint_dom /= dom_singleton_L.
-         rewrite /dom /flowint_dom.
-         assert (tp <> new_node). admit.
-         admit.
+    + rewrite /in_outsets /in_outset /in_inset /out_map /inf /out /= in H14, H15.
+      repeat split. 
+      * rewrite Hn' in H14.
+        specialize (H14 y).
+        rewrite nzmap_lookup_total_insert in H6.
+        rewrite nzmap_lookup_total_insert in H14.
+        apply H14 in H6.
+        lia.
+      * rewrite lookup_insert. simpl.
+        rewrite lookup_insert in H4. simpl in H4.
+        specialize (H14 y).
+        subst n'.
+        rewrite nzmap_lookup_total_insert in H14, H15.
+        rewrite nzmap_lookup_total_insert in H6.
+        auto.
+      * intros.
+        rewrite nzmap_lookup_total_insert.
+        rewrite lookup_insert in H6. simpl in H6.
+        destruct H6. auto.
+      * intros.
+        rewrite nzmap_lookup_total_insert.
+        rewrite /in_outsets /in_outset /in_inset /out_map /inf /out /= in H6.
+        rewrite /in_outsets /in_outset /in_inset /out_map /inf /out /= in allNot.
+        specialize (allNot n').
+        subst n'.
+        rewrite nzmap_lookup_total_insert in allNot.
+        rewrite lookup_insert in H4. simpl in H4. contradiction.
+   - rewrite Hznth.
+     entailer !.
+     iIntros "_".
+     iPureIntro.
+     set I1 := flows.int {| infR := {[tp := S]}; outR := <<[ Znth 0 next0 := S ]>> ∅ |}.
+     set I2 := flows.int {| infR := {[new_node := S]}; outR := <<[ tp := S ]>> ∅ |}.
+     unfold contextualLeq.
+     assert (✓ (I1 ⋅ I2)) as ValidI_12.
+     {
+       apply intValid_composable.
+       unfold intComposable.
+       repeat split; simpl.
+       ** (* tp <> n' *) admit.
+       ** intros. set_solver.
+       ** (* new_node <> tp *) admit.
+       ** set_solver.
+       ** rewrite /flowint_dom /= ! dom_singleton_L.
+          assert (tp <> new_node). admit.
+          set_solver.
       ** apply map_Forall_lookup.
          intros ? ? Hix.
-         apply elem_of_dom_2 in Hix.
-         rewrite dom_singleton in Hix.
-         rewrite elem_of_singleton in Hix. subst i.
-         rewrite /inf /inf_map /out /out_map. simpl.
-         admit.
+         pose proof Hix as Hix'.
+         destruct (decide (tp = i)); subst.
+         rewrite lookup_insert in Hix.
+         inversion Hix.
+         subst x1.
+         rewrite /inf /inf_map /out /out_map lookup_insert /=.
+         rewrite nzmap_lookup_total_insert.
+         rewrite ! ccm_pinv_inv.
+         rewrite ccm_right_id. auto.
+         apply elem_of_dom_2 in Hix'.
+         rewrite dom_singleton in Hix'.
+         set_solver.
       ** apply map_Forall_lookup.
          intros ? ? Hix.
-         apply elem_of_dom_2 in Hix.
-         admit.
-    + rewrite /flowint_dom /inf_map /= dom_singleton_L /=.
-      rewrite intComp_dom. set_solver.
-      apply intValid_composable.
-      unfold intComposable .
-      admit.
-    + intros n1 Hn1.
-      rewrite /flowint_dom /inf_map /= in Hn1.
-      rewrite /inf /inf_map.
-      Search dom  singleton.
-      rewrite dom_singleton in Hn1.
-      Search singleton "∈".
-      apply elem_of_singleton_1 in Hn1. subst n1.
-      rewrite lookup_insert. simpl.
-      admit.
-    + intros n1 Hn1.
-      rewrite /flowint_dom /inf_map /= in Hn1.
-      rewrite /inf /inf_map.
-
+         pose proof Hix as Hix'.
+         destruct (decide (new_node = i)).
+         { rewrite e in Hix. 
+           rewrite lookup_insert in Hix.
+           inversion Hix.
+           subst x1.
+           rewrite <- e.
+           rewrite /inf /inf_map /out /out_map. simpl.
+           rewrite lookup_insert.
+           simpl.
+           rewrite ! nzmap_lookup_total_insert_ne.
+           rewrite ! nzmap_lookup_empty .
+           rewrite <- ccm_right_id.
+           rewrite ccm_pinv_unit.
+           rewrite ccm_right_id.
+           rewrite ccm_comm.
+           rewrite ccm_right_id.
+           auto.
+           admit. (* n' <> new_node *)
+         }
+         apply elem_of_dom_2 in Hix'.
+         rewrite dom_singleton in Hix'.
+         set_solver.
+     }
+     assert (✓ I1) as ValidI_1.
+     { by eapply intComp_valid_proj1. }
+     assert (✓ I2) as ValidI_2.
+     { by eapply intComp_valid_proj2. }
+     split; auto. split. auto. split.
+     apply intComp_dom_subseteq_l; auto.
+     split.
+     + intros.
+       pose proof (intComp_unfold_inf_1 I1 I2).
+       specialize (((H12 ValidI_12) n) H6).
+       (* prove out I2 n = 0
+          seems like it's not provable *)
+       assert (out I2 n = 0%CCM).
+       {
+         unfold I2.
+         rewrite /out /out_map /=.
+         unfold I1 in H6.
+         rewrite /dom /flowint_dom /= in H6.
+         assert (n = tp). { clear -H6. set_solver. }
+         assert (S = 0%CCM). admit.
+         subst S.
+         subst n.
+         apply nzmap_lookup_total_insert.
+         (* It's only true when S = 0, but we know S <> 0 *)
+       }
+       rewrite H31 in H12.
+       admit.
+    + intros.
+      pose proof (intComp_unfold_out I1 I2).
+      specialize (((H12 ValidI_12) n) H6).
+      (* prove out I2 n = 0 *)
+      assert (out I2 n = 0%CCM) as out_I2_n_0.
+      {
+        unfold I2.
+        rewrite /out /out_map /=.
+        assert (dom (I1 ⋅ I2) = dom I1 ∪ dom I2) as unionD.
+        { by apply intComp_dom. }
+        rewrite unionD in H6.
+        assert ({[tp]} = dom I1).
+        {
+          unfold I1.
+          rewrite /dom /flowint_dom /inf_map /=. set_solver.
+        }
+        assert (n ∉ dom I1) as n_not_in_I1. set_solver.
+        assert (n <> tp) as n_neq_tp. set_solver.
+        rewrite  nzmap_lookup_total_insert_ne; auto.
+      }
+      rewrite out_I2_n_0 in H12.
+      rewrite ccm_right_id in H12.
+      auto.
+    
     Admitted.
 
 
