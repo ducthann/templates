@@ -58,6 +58,51 @@ Class NodeRep : Type := {
 
  *)
 
+Local Instance nzmap_filter: Filter (Z * nat) (@multiset_flows.K_multiset Key Z.eq_dec Z_countable).
+Proof.
+  intros ???.
+  eapply (NZMap (filter P (nzmap_car H2)) _).
+  Unshelve.
+  unfold bool_decide.
+  destruct (nzmap_wf_decision Key (filter P (nzmap_car H2))); try done.
+  unfold not in n.
+  apply n. clear n.
+  rewrite / nzmap_wf /map_Forall.
+  intros i x Hf.
+  assert (nzmap_wf (nzmap_car H2)) as wfH. { apply nzmap_is_wf. }
+  apply map_lookup_filter_Some_1_1 in Hf.
+  rewrite /nzmap_wf /map_Forall in wfH.
+  eapply wfH; eauto.
+Defined.
+
+Lemma nzmap_lookup_filter_Some `{Countable K} `{CCM A}
+  (P : Z * nat → Prop) (H7 : ∀ x : Z * nat, Decision (P x)) 
+  (m : nzmap Z nat) (i : Z) (x : nat) :
+  filter P m !! i = Some x <-> m !! i = Some x /\ P (i, x).
+Proof.
+  unfold lookup, nzmap_lookup .
+  split.
+  - intros.
+    destruct m.
+    unfold filter in H3.
+    simpl in H3.
+    apply map_lookup_filter_Some in H3. auto.
+  - intros.
+    destruct m.
+    unfold filter. simpl.
+    rewrite map_lookup_filter_Some. auto.
+Qed.
+
+Lemma nzmap_dom_filter_subseteq (P : Z * nat → Prop) `{!∀ x, Decision (P x)} (m : nzmap Z nat):
+  dom (filter P m) ⊆ dom m.
+Proof.
+  destruct m.
+  unfold filter.
+  simpl.
+  unfold nzmap_dom. simpl.
+  apply dom_filter_subseteq.
+Qed.
+
 #[local] Obligation Tactic := idtac.
 
 #[local] Program Instance my_specific_tree_rep : NodeRep := {
@@ -79,7 +124,6 @@ Class NodeRep : Type := {
 (* ; node_rep_R_valid_pointer }. *)
 Next Obligation.
   intros n In Cn next.
-  Check dom (out_map In).
   destruct (EqDec_val n nullval). 
   - simpl. rewrite e. auto.
   - rewrite if_false; auto. iIntros "H".
@@ -193,13 +237,15 @@ Definition list_to_gmap (l : list Node) : gmap nat Node :=
 (*  Ip : @flowintT _ K_multiset_ccm  _ _ *)
 
 Check contextualLeq _ .
+(*  @flows.int (@multiset_flows.K_multiset Key Z.eq_dec Z_countable) K_multiset_ccm _  _
+          {|infR := {[ tp := S ]}; outR := <<[ Znth 0 next0 := S ]>> ∅ |} = Ip; *)
 
 
 Definition insertOp_spec :=
   DECLARE _insertOp
     WITH x: Z, v: val, stt: Z, p: Node, tp: val, l: val, dl: val,
                   Ip : flowintT,
-                    Cp : (gmap Key data_struct.Value), S : nzmap Z nat,
+                    Cp : (gmap Key data_struct.Value),
                      (* pnext : gmap nat Node, *)
                       next0: list Node, next: list Node,
                         sh: share, gv: globals
@@ -207,8 +253,7 @@ Definition insertOp_spec :=
   PROP (repable_signed x; is_pointer_or_null v; (*node_size = length ((gmap_to_node_list pnext)); *)
         length next = node_size;
         in_inset _ _ Key x Ip tp; ¬ in_outsets _ _ Key x Ip; 
-        @flows.int (@multiset_flows.K_multiset Key Z.eq_dec Z_countable) K_multiset_ccm _  _
-          {|infR := {[ tp := S%CCM ]}; outR := <<[ Znth 0 next0 := S%CCM ]>> ∅ |} = Ip; 
+       
         (* is_pointer_or_null (Znth 0 (gmap_to_node_list pnext)); *)
         is_pointer_or_null (Znth 0 next) (* ;
         tp = nullval*) )
@@ -235,13 +280,11 @@ Definition insertOp_spec :=
 
   ).
 
-Definition Gprog : funspecs :=
-    ltac:(with_library prog [acquire_spec; release_spec; makelock_spec;
-     surely_malloc_spec; insertOp_spec (* ; traverse_spec; insert_spec; treebox_new_spec*) ]).
-(* Proving insertOp satisfies spec *)
 
-Check default.
-  
+Definition Gprog : funspecs :=
+    ltac:(with_library prog [acquire_spec; release_spec; makelock_spec; surely_malloc_spec; insertOp_spec]).
+
+(* Proving insertOp satisfies spec *)
 Lemma insertOp: semax_body Vprog Gprog f_insertOp insertOp_spec.
 Proof.
   start_function.
@@ -251,7 +294,6 @@ Proof.
   assert (tp <> nullval). admit.
   rewrite -> if_false; auto.
   Intros x0 v0.
-  Check outR .
   forward.
   forward.
   forward.
@@ -269,7 +311,7 @@ Proof.
   { apply Ztac.elim_concl_le.
     intros Hlt.
     assert (Z.lt x0 x ∧ in_inset val_EqDecision Node_countable Key x Ip tp) as Hcm; auto.
-    apply (H14 x) in Hcm. set_solver.
+    apply (H13 x) in Hcm. set_solver.
   }
   assert_PROP (new_node <> nullval). entailer !.
   assert (list_to_gmap_aux next 0 !!! 0 = Znth 0 next /\
@@ -277,10 +319,16 @@ Proof.
   { split; unfold Znth; [destruct next as [| x' xs'] | destruct next0 as [| x' xs']];
       simpl; auto; rewrite lookup_total_insert; auto.
   }
+  unfold in_outset, out, in_inset in H13.
+  unfold in_outsets, in_outset, out in H14.
+  unfold in_outset in allNot.
   Exists new_node.
+  (* Set Printing Implicit. *)
   Exists (@flows.int (@multiset_flows.K_multiset Key Z.eq_dec Z_countable) K_multiset_ccm _  _
-                     {| infR := {[ new_node := S%CCM ]}; outR := <<[ tp := S%CCM ]>> ∅ |}).
-  Exists Ip.
+                     {| infR := {[ new_node := inf Ip tp ]}; outR := <<[ tp := filter (fun '(k, _) => Z.lt x k) (inf Ip tp) ]>> ∅ |}).
+  
+  Exists (@flows.int (@multiset_flows.K_multiset Key Z.eq_dec Z_countable) K_multiset_ccm _  _
+                     {| infR := {[ tp := filter (fun '(k, _) => Z.lt x k) (inf Ip tp) ]}; outR := <<[ n' := out Ip n' ]>> ∅ |}).
   rewrite / node / my_specific_tree_rep.
   rewrite if_false; auto.
   rewrite if_false; auto.
@@ -288,160 +336,113 @@ Proof.
   Exists x v tp.
   Exists x0 v0 n'.
   entailer !.
-  rewrite /in_outset /in_inset /out_map /inf /out /=.
-  rewrite Hznth.
-  split; auto.
-  rewrite /in_outset /in_inset /out_map /inf /out /= in H13, H14, H15.
-  rewrite /in_outset /in_inset /out_map /inf /out /=.
-  rewrite /in_outset /in_inset /out_map /inf /out /= in H4.
-  destruct (decide (S = 0%CCM)); subst.
-  - apply leibniz_equiv_iff in H13.
-    rewrite (nzmap_dom_insert_zero) in H13; auto.
-    (* contradiction *)
-    set_solver.
-  - apply leibniz_equiv_iff in H13.
-    rewrite (nzmap_dom_insert_nonzero) in H13; auto.
-    assert (Znth 0 next0 = n') as Hn'. set_solver.
-    split.
-    + rewrite <- leibniz_equiv_iff.
-      rewrite nzmap_dom_insert_nonzero; auto.
+  repeat split; try done.
+  - rewrite /list_to_gmap Hznth; auto. 
+  - rewrite / out_map /inf /=.
+    rewrite <- leibniz_equiv_iff.
+    rewrite nzmap_dom_insert_nonzero. set_solver.
+    rewrite /in_inset in H4.
+    apply nzmap_elem_of_dom_total in H4.
+    destruct (lookup) eqn: Eqn.
+    rewrite /inf Eqn /= in H4.
+    rewrite <- nzmap_elem_of_dom_total in H4.
+    admit.
+    unfold inf in H4. rewrite Eqn in H4. simpl in H4.
+    contradiction.
+  - rewrite /in_outset /out /out_map //= nzmap_lookup_total_insert in H11.
+    rewrite / in_inset in H4.
+    apply nzmap_elem_of_dom_total in H11.
+    rewrite nzmap_lookup_total_alt in H11.
+    rewrite /default /id in H11.
+    destruct (lookup) eqn: Eqn.
+    apply (nzmap_lookup_filter_Some (λ '(k, _), (x < k)%Z) _ (@inf (@multiset_flows.K_multiset Key Z.eq_dec Z_countable)
+            (@multiset_flows.K_multiset_ccm Key Z.eq_dec Z_countable) val_EqDecision Node_countable Ip
+            tp)  y n) in Eqn.
+    lia.
+    contradiction.
+  - rewrite /in_outset /out /out_map /= nzmap_lookup_total_insert /inf in H11.
+    rewrite /in_inset /inf lookup_insert /=. 
+    rewrite /default /id in H11.
+    destruct (lookup) eqn: Eqn.
+    + assert (dom (filter (λ '(k, _), (x < k)%Z) k) ⊆ dom k). { apply nzmap_dom_filter_subseteq. }
       set_solver.
-    + rewrite /in_outsets /in_outset /in_inset /out_map /inf /out /= in H14, H15.
-      repeat split. 
-      * rewrite Hn' in H14.
-        specialize (H14 y).
-        rewrite nzmap_lookup_total_insert in H6.
-        rewrite nzmap_lookup_total_insert in H14.
-        apply H14 in H6.
-        lia.
-      * rewrite lookup_insert. simpl.
-        rewrite lookup_insert in H4. simpl in H4.
-        specialize (H14 y).
-        subst n'.
-        rewrite nzmap_lookup_total_insert in H14, H15.
-        rewrite nzmap_lookup_total_insert in H6.
-        auto.
-      * intros.
-        rewrite nzmap_lookup_total_insert.
-        rewrite lookup_insert in H6. simpl in H6.
-        destruct H6. auto.
-      * intros.
-        rewrite nzmap_lookup_total_insert.
-        rewrite /in_outsets /in_outset /in_inset /out_map /inf /out /= in H6.
-        rewrite /in_outsets /in_outset /in_inset /out_map /inf /out /= in allNot.
-        specialize (allNot n').
-        subst n'.
-        rewrite nzmap_lookup_total_insert in allNot.
-        rewrite lookup_insert in H4. simpl in H4. contradiction.
-   - rewrite Hznth.
-     entailer !.
-     iIntros "_".
-     iPureIntro.
-     set I1 := flows.int {| infR := {[tp := S]}; outR := <<[ Znth 0 next0 := S ]>> ∅ |}.
-     set I2 := flows.int {| infR := {[new_node := S]}; outR := <<[ tp := S ]>> ∅ |}.
-     unfold contextualLeq.
-     assert (✓ (I1 ⋅ I2)) as ValidI_12.
-     {
-       apply intValid_composable.
-       unfold intComposable.
-       repeat split; simpl.
-       ** (* tp <> n' *) admit.
-       ** intros. set_solver.
-       ** (* new_node <> tp *) admit.
-       ** set_solver.
-       ** rewrite /flowint_dom /= ! dom_singleton_L.
-          assert (tp <> new_node). admit.
-          set_solver.
-      ** apply map_Forall_lookup.
-         intros ? ? Hix.
-         pose proof Hix as Hix'.
-         destruct (decide (tp = i)); subst.
-         rewrite lookup_insert in Hix.
-         inversion Hix.
-         subst x1.
-         rewrite /inf /inf_map /out /out_map lookup_insert /=.
-         rewrite nzmap_lookup_total_insert.
-         rewrite ! ccm_pinv_inv.
-         rewrite ccm_right_id. auto.
-         apply elem_of_dom_2 in Hix'.
-         rewrite dom_singleton in Hix'.
-         set_solver.
-      ** apply map_Forall_lookup.
-         intros ? ? Hix.
-         pose proof Hix as Hix'.
-         destruct (decide (new_node = i)).
-         { rewrite e in Hix. 
-           rewrite lookup_insert in Hix.
-           inversion Hix.
-           subst x1.
-           rewrite <- e.
-           rewrite /inf /inf_map /out /out_map. simpl.
-           rewrite lookup_insert.
-           simpl.
-           rewrite ! nzmap_lookup_total_insert_ne.
-           rewrite ! nzmap_lookup_empty .
-           rewrite <- ccm_right_id.
-           rewrite ccm_pinv_unit.
-           rewrite ccm_right_id.
-           rewrite ccm_comm.
-           rewrite ccm_right_id.
-           auto.
-           admit. (* n' <> new_node *)
-         }
-         apply elem_of_dom_2 in Hix'.
-         rewrite dom_singleton in Hix'.
-         set_solver.
-     }
-     assert (✓ I1) as ValidI_1.
-     { by eapply intComp_valid_proj1. }
-     assert (✓ I2) as ValidI_2.
-     { by eapply intComp_valid_proj2. }
-     split; auto. split. auto. split.
-     apply intComp_dom_subseteq_l; auto.
-     split.
-     + intros.
-       pose proof (intComp_unfold_inf_1 I1 I2).
-       specialize (((H12 ValidI_12) n) H6).
-       (* prove out I2 n = 0
-          seems like it's not provable *)
-       assert (out I2 n = 0%CCM).
-       {
-         unfold I2.
-         rewrite /out /out_map /=.
-         unfold I1 in H6.
-         rewrite /dom /flowint_dom /= in H6.
-         assert (n = tp). { clear -H6. set_solver. }
-         assert (S = 0%CCM). admit.
-         subst S.
-         subst n.
-         apply nzmap_lookup_total_insert.
-         (* It's only true when S = 0, but we know S <> 0 *)
-       }
-       rewrite H31 in H12.
-       admit.
-    + intros.
-      pose proof (intComp_unfold_out I1 I2).
-      specialize (((H12 ValidI_12) n) H6).
-      (* prove out I2 n = 0 *)
-      assert (out I2 n = 0%CCM) as out_I2_n_0.
-      {
-        unfold I2.
-        rewrite /out /out_map /=.
-        assert (dom (I1 ⋅ I2) = dom I1 ∪ dom I2) as unionD.
-        { by apply intComp_dom. }
-        rewrite unionD in H6.
-        assert ({[tp]} = dom I1).
-        {
-          unfold I1.
-          rewrite /dom /flowint_dom /inf_map /=. set_solver.
-        }
-        assert (n ∉ dom I1) as n_not_in_I1. set_solver.
-        assert (n <> tp) as n_neq_tp. set_solver.
-        rewrite  nzmap_lookup_total_insert_ne; auto.
-      }
-      rewrite out_I2_n_0 in H12.
-      rewrite ccm_right_id in H12.
-      auto.
+    + rewrite /in_inset /inf Eqn /default in H4.
+      apply nzmap_elem_of_dom_total in H4.
+      rewrite nzmap_lookup_empty in H4. contradiction.
+  - intros.
+    destruct H11.
+    rewrite /in_inset /out /out_map /inf lookup_insert /= in H30. 
+    rewrite /in_outset /out /out_map nzmap_lookup_total_insert /inf.
+    destruct (lookup) eqn: Eqn.
+    simpl in H30.
+    rewrite /default /id.
+    admit.
+    set_solver.
+  - intros.
+    rewrite /in_outsets /in_outset /out /out_map /inf /= in H11. 
+    destruct H11 as (n1 & H11).
+    rewrite /in_outset /out /out_map nzmap_lookup_total_insert /inf.
+    destruct (decide (n1 = tp)).
+    { subst. rewrite nzmap_lookup_total_insert in H11. auto. }
+    { rewrite nzmap_lookup_total_insert_ne in H11. set_solver. auto. }
+  - simpl.
+    rewrite <- leibniz_equiv_iff.
+    rewrite nzmap_dom_insert_nonzero.
+    set_solver.
+    rewrite /out.
+    apply nzmap_elem_of_dom_total. rewrite H12. set_solver.
+  - rewrite /in_outset /out /= nzmap_lookup_total_insert in H11. 
+    specialize (H13 y).
+    apply H13 in H11. lia.
+  - rewrite /in_inset /inf lookup_insert. 
+    rewrite /in_outset /out nzmap_lookup_total_insert /= in H11. 
+    specialize (H13 y).
+    apply H13 in H11.
+    destruct H11.
+    assert ((x < y)%Z). lia.
+    destruct (lookup) eqn: Eqn.
+    rewrite /default /id.
+    admit.
+    rewrite /in_inset in H4.
+    rewrite /default /id.
+    rewrite /inf in H30. rewrite Eqn /= in H30. set_solver.
+  - intros.
+    destruct H11.
+    rewrite /in_inset /out /out_map /inf /= lookup_insert in H30. 
+    rewrite /in_outset /out nzmap_lookup_total_insert /=. 
+    apply H14.
+    exists n'. apply H13.
+    split; try done.
+    destruct (lookup) eqn: Eqn.
+    unfold inf.
+    rewrite Eqn /=.
+    assert (dom (filter (λ '(k, _), (x < k)%Z) k) ⊆ dom k). { apply nzmap_dom_filter_subseteq. }
+    set_solver.
+    apply nzmap_elem_of_dom_total in H30.
+    rewrite /in_inset /inf in H4.
+    rewrite Eqn in H4.
+    unfold default in H4. set_solver.
+  - intros.
+    rewrite /in_outsets /in_outset /out nzmap_lookup_total_insert /=.
+    apply H14.
+    rewrite /in_outsets /in_outset /out /= in H11. 
+    destruct H11 as (n1 & H11).
+    destruct (decide (n1 = n')) as [-> | Hn1n'].
+    { rewrite nzmap_lookup_total_insert in H11. by eexists. }
+    { rewrite nzmap_lookup_total_insert_ne in H11. by eexists. auto. }
+  - rewrite Hznth. entailer !.
+    iIntros "_".
+    iPureIntro.
+    set I1 := flows.int
+       {|
+         infR := {[new_node := inf Ip tp]};
+         outR := <<[ tp := filter (λ '(k, _), (x < k)%Z) (inf Ip tp) ]>> ∅
+       |}.
+    set I2 := flows.int
+         {|
+           infR := {[tp := filter (λ '(k, _), (x < k)%Z) (inf Ip tp)]};
+           outR := <<[ n' := out Ip n' ]>> ∅
+         |}.
     
     Admitted.
 
