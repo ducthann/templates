@@ -30,9 +30,7 @@ Proof. unfold Inhabitant; apply empty. Defined.
 Proof. unfold Inhabitant; apply Pos_Infinity. Defined.
 
 Section give_up_traverse.
-  Locate VSTGS0.
   Context `{N: NodeRep } `{EqDecision K} `{Countable K}.
-  Locate VSTGS0.
   Context `{!cinvG Σ, atom_impl : !atomic_int_impl (Tstruct _atom_int noattr),
             !flowintG Σ, !nodesetG Σ, !keysetG Σ, !keymapG Σ, inG Σ (frac_authR (agreeR Node))}.
   
@@ -102,6 +100,16 @@ Proof.
   unfold nzmap_dom. simpl.
   apply dom_filter_subseteq.
 Qed.
+
+Check map_filter_id.
+
+Lemma nzmap_filter_id  (P : Z * nat → Prop) `{!∀ x, Decision (P x)} (m : nzmap Z nat):
+    (∀ i x, m !! i = Some x → P (i, x)) → filter P m = m.
+Proof.
+  intros.
+  destruct m.
+Admitted.
+
 
 #[local] Obligation Tactic := idtac.
 
@@ -209,7 +217,6 @@ Proof.
     lia.
 Qed.
 
-
 Definition surely_malloc_spec :=
   DECLARE _surely_malloc
    WITH t: type, gv: globals
@@ -240,32 +247,25 @@ Check contextualLeq _ .
 (*  @flows.int (@multiset_flows.K_multiset Key Z.eq_dec Z_countable) K_multiset_ccm _  _
           {|infR := {[ tp := S ]}; outR := <<[ Znth 0 next0 := S ]>> ∅ |} = Ip; *)
 
+Definition flow_int I:= @flows.int (@multiset_flows.K_multiset Key Z.eq_dec Z_countable)
+                           K_multiset_ccm _ _ I.
+
+Definition remap_out I tp new_node := flow_int {| infR := inf_map I; outR := <<[ tp := 0%CCM]>> <<[ new_node := out I tp ]>>(out_map I) |}.
 
 Definition insertOp_spec :=
   DECLARE _insertOp
-    WITH x: Z, v: val, stt: Z, p: Node, tp: val, l: val, dl: val,
-                  Ip : flowintT,
-                    Cp : (gmap Key data_struct.Value),
-                     (* pnext : gmap nat Node, *)
-                      next0: list Node, next: list Node,
-                        sh: share, gv: globals
+    WITH x: Z, v: val, stt: Z, p: Node, tp: val, l: val, dl: val, Ip: flowintT,
+         Cp: (gmap Key data_struct.Value), next0: list Node, next: list Node, sh: share, gv: globals
   PRE [ tptr (tptr t_struct_list), tint, tptr tvoid, tint, tptr (struct_dlist)]
-  PROP (repable_signed x; is_pointer_or_null v; (*node_size = length ((gmap_to_node_list pnext)); *)
-        length next = node_size;
-        in_inset _ _ Key x Ip tp; ¬ in_outsets _ _ Key x Ip; 
-       
-        (* is_pointer_or_null (Znth 0 (gmap_to_node_list pnext)); *)
-        is_pointer_or_null (Znth 0 next) (* ;
-        tp = nullval*) )
+  PROP (repable_signed x; is_pointer_or_null v; length next = node_size;
+        in_inset _ _ Key x Ip tp; ¬ in_outsets _ _ Key x Ip;
+        is_pointer_or_null (Znth 0 next) (* ; tp = nullval*) )
   PARAMS (p; Vint (Int.repr x); v; Vint (Int.repr stt); l)
   GLOBALS (gv)
   SEP (mem_mgr gv; node tp Ip Cp (list_to_gmap next0);
        field_at Tsh (struct_dlist) (DOT _list) dl l;
        data_at Ews (tptr t_struct_list) tp p;
-                   (* field_at Ews (struct_dlist) [StructField _size] (Vptrofs (Ptrofs.repr 2%Z)) l ∗ *)
-                   (* data_at Ews (tarray (tptr tvoid) (Zlength (gmap_to_node_list pnext) )) (gmap_to_node_list pnext) dl *)
-       data_at Ews (tarray (tptr tvoid) (Zlength next)) next dl
-       )
+       data_at Ews (tarray (tptr tvoid) (Zlength next)) next dl)
   POST[ tvoid ]
   ∃ (pnt : Node) (Ip1 Ip2: flowintT),
   PROP (pnt <> nullval)
@@ -275,11 +275,23 @@ Definition insertOp_spec :=
        ⌜contextualLeq _ Ip (Ip2 ⋅ Ip1)⌝;
        field_at Tsh struct_dlist (DOT _list) dl l;
        data_at Ews (tptr t_struct_list) pnt p;
-       (*data_at Ews (tarray (tptr tvoid) (Zlength (gmap_to_node_list pnext))) (gmap_to_node_list pnext) dl*)
      data_at Ews (tarray (tptr tvoid) (Zlength next)) next dl  
 
   ).
 
+Search data_at.
+
+(*
+Lemma ne_pointer sh p1 p2 t v1 v2:
+  writable_share sh -> sh ≠ Share.bot -> (0 < sizeof t)%Z ->
+  data_at sh t v1 p1 ∗ data_at sh t v2 p2 -∗ ⌜p1 <> p2⌝.
+Proof.
+  intros.
+  iIntros "(H1 & H2)".
+  destruct (decide (p1 = p2)) as [-> | Hp]; try done.
+  iDestruct (data_at_conflict with "[$H1 $H2]") as "H"; try done.
+Qed.
+*)
 
 Definition Gprog : funspecs :=
     ltac:(with_library prog [acquire_spec; release_spec; makelock_spec; surely_malloc_spec; insertOp_spec]).
@@ -291,6 +303,7 @@ Proof.
   forward_call (t_struct_list, gv).
   unfold node, my_specific_tree_rep.
   Intros new_node.
+  
   assert (tp <> nullval). admit.
   rewrite -> if_false; auto.
   Intros x0 v0.
@@ -305,6 +318,7 @@ Proof.
   Intros n'.
   forward.
   forward.
+  assert_PROP (new_node <> tp). entailer !.
   unfold in_outsets in H5.
   assert (forall n, ¬ in_outset val_EqDecision Node_countable Key x Ip n) as allNot. set_solver.
   assert (Z.le x x0) as Hle.
@@ -322,6 +336,7 @@ Proof.
   unfold in_outset, out, in_inset in H13.
   unfold in_outsets, in_outset, out in H14.
   unfold in_outset in allNot.
+   
   Exists new_node.
   (* Set Printing Implicit. *)
   Exists (@flows.int (@multiset_flows.K_multiset Key Z.eq_dec Z_countable) K_multiset_ccm _  _
@@ -344,8 +359,12 @@ Proof.
     rewrite /in_inset in H4.
     apply nzmap_elem_of_dom_total in H4.
     destruct (lookup) eqn: Eqn.
-    rewrite /inf Eqn /= in H4.
     rewrite <- nzmap_elem_of_dom_total in H4.
+    rewrite /inf /= in H4.
+    rewrite Eqn /= in H4.
+    apply nzmap_elem_of_dom in H4.
+    rewrite /is_Some in H4.
+    destruct H4 as (? & H4).
     admit.
     unfold inf in H4. rewrite Eqn in H4. simpl in H4.
     contradiction.
@@ -371,12 +390,20 @@ Proof.
       rewrite nzmap_lookup_empty in H4. contradiction.
   - intros.
     destruct H11.
-    rewrite /in_inset /out /out_map /inf lookup_insert /= in H30. 
+    rewrite /in_inset /out /out_map /inf lookup_insert /= in H31. 
     rewrite /in_outset /out /out_map nzmap_lookup_total_insert /inf.
     destruct (lookup) eqn: Eqn.
-    simpl in H30.
+    simpl in H31.
     rewrite /default /id.
-    admit.
+    rewrite /in_inset /inf in H4.
+    rewrite Eqn /= in H4.
+    apply nzmap_elem_of_dom in H31.
+    rewrite /is_Some in H31.
+    destruct H31 as (? & H31).
+    apply nzmap_elem_of_dom.
+    apply (mk_is_Some _ x1).
+    apply nzmap_lookup_filter_Some.
+    split; auto.
     set_solver.
   - intros.
     rewrite /in_outsets /in_outset /out /out_map /inf /= in H11. 
@@ -402,13 +429,20 @@ Proof.
     assert ((x < y)%Z). lia.
     destruct (lookup) eqn: Eqn.
     rewrite /default /id.
-    admit.
+    apply nzmap_elem_of_dom in H31.
+    rewrite /inf /is_Some in H31.
+    rewrite Eqn in H31.
+    destruct H31 as (? & H31).
+    apply nzmap_elem_of_dom.
+    apply (mk_is_Some _ x1).
+    apply nzmap_lookup_filter_Some.
+    split; auto.
     rewrite /in_inset in H4.
     rewrite /default /id.
-    rewrite /inf in H30. rewrite Eqn /= in H30. set_solver.
+    rewrite /inf in H31. rewrite Eqn /= in H31. set_solver.
   - intros.
     destruct H11.
-    rewrite /in_inset /out /out_map /inf /= lookup_insert in H30. 
+    rewrite /in_inset /out /out_map /inf /= lookup_insert in H31. 
     rewrite /in_outset /out nzmap_lookup_total_insert /=. 
     apply H14.
     exists n'. apply H13.
@@ -418,7 +452,7 @@ Proof.
     rewrite Eqn /=.
     assert (dom (filter (λ '(k, _), (x < k)%Z) k) ⊆ dom k). { apply nzmap_dom_filter_subseteq. }
     set_solver.
-    apply nzmap_elem_of_dom_total in H30.
+    apply nzmap_elem_of_dom_total in H31.
     rewrite /in_inset /inf in H4.
     rewrite Eqn in H4.
     unfold default in H4. set_solver.
@@ -433,6 +467,8 @@ Proof.
   - rewrite Hznth. entailer !.
     iIntros "_".
     iPureIntro.
+
+    
     set I1 := flows.int
        {|
          infR := {[new_node := inf Ip tp]};
@@ -443,6 +479,9 @@ Proof.
            infR := {[tp := filter (λ '(k, _), (x < k)%Z) (inf Ip tp)]};
            outR := <<[ n' := out Ip n' ]>> ∅
          |}.
+
+    Check keyset _ _ Key I1 tp.
+    
     
     Admitted.
 
