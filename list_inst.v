@@ -24,8 +24,8 @@ Require Import tmpl.flows_ora.
 Definition Vprog : varspecs.  mk_varspecs prog. Defined.
 
 #[global] Instance gmap_inhabited V : Inhabitant (gmap key V).
-Proof. unfold Inhabitant; apply empty. Defined.
-
+ Proof. unfold Inhabitant; apply empty. Defined.
+ 
 #[global] Instance number_inhabited: Inhabitant number.
 Proof. unfold Inhabitant; apply Pos_Infinity. Defined.
 
@@ -61,12 +61,12 @@ Proof.
   intros ???.
   eapply (NZMap (filter P (nzmap_car H2)) _).
   Unshelve.
-  unfold bool_decide.
-  destruct (nzmap_wf_decision Key (filter P (nzmap_car H2))); try done.
-  rewrite /not in n. apply n. clear n.
+  rewrite /bool_decide.
+  destruct (nzmap_wf_decision Key (filter P (nzmap_car H2))) as [Hx | Hy]; try done.
+  rewrite /not in Hy. apply Hy. clear Hy.
   rewrite / nzmap_wf /map_Forall.
   intros i x Hf.
-  assert (nzmap_wf (nzmap_car H2)) as wfH. { apply nzmap_is_wf. }
+  assert (nzmap_wf (nzmap_car H2)) as wfH. by apply nzmap_is_wf.
   apply map_lookup_filter_Some_1_1 in Hf.
   rewrite /nzmap_wf /map_Forall in wfH.
   eapply wfH; eauto.
@@ -76,8 +76,7 @@ Lemma nzmap_lookup_filter_Some `{Countable K} `{CCM A}
   (P : Z * nat → Prop) (H7 : ∀ x : Z * nat, Decision (P x)) (m : nzmap Z nat) (i : Z) (x : nat):
   filter P m !! i = Some x <-> m !! i = Some x /\ P (i, x).
 Proof.
-  rewrite /lookup /nzmap_lookup.
-  split; intros; destruct m.
+  rewrite /lookup /nzmap_lookup. split; intros; destruct m.
   - rewrite /filter /= in H3. { by apply map_lookup_filter_Some in H3. }
   - by rewrite /filter map_lookup_filter_Some.
 Qed.
@@ -96,12 +95,17 @@ Proof. destruct m. rewrite / filter /nzmap_dom /=. apply dom_filter_subseteq. Qe
          out_map In = ∅ ∧ C = ∅ /\ dom In = {[ n ]} ⌝ ∧ emp
   (*⌜∀ y : Key, ¬ in_outsets val_EqDecision Node_countable Key y In ∧
                      ¬ ∃ n1 : Node, n1 ≠ n ∧ in_inset val_EqDecision Node_countable Key y In n1 ∧
-                     C = ∅⌝ ∧ emp *)
+                     C = ∅⌝ ∧ emp
+
+   node nullval In C 
+
+   reconstruct 
+   *)
   else
   (∃ (x : Z) (v : val) (n' : Node),
       ⌜(Int.min_signed <= x <= Int.max_signed)%Z /\ is_pointer_or_null (next !!! 0) /\
           (tc_val (tptr Tvoid) v) ∧ C = {[x := v]} ∧ dom (out_map In) = {[n']} ∧ dom In = {[ n ]} /\
-        (* (∀ (k' : Z), (x < k')%Z -> k' ∈ dom (inf In n)) /\ *)
+         (∃ (k : Z), ∀ (k' : Z), (k < k')%Z -> k' ∈ dom (inf In n)) /\ 
         (forall y, in_outset _ _ Key y In n' <-> (x < y)%Z ∧ in_inset _ _ Key y In n) ∧
         (forall y, in_outsets _ _ Key y In -> in_outset _ _ Key y In n') ⌝ ∧
        data_at Ews t_struct_list (Vint (Int.repr x), (v, (next !!! 0))) n ∗
@@ -163,7 +167,7 @@ Proof.
     forward.
     Exists NF p p n'.
     entailer !.
-    apply (H11 x), (H10 x) in H7. lia.
+    apply (H12 x), (H11 x) in H7. lia.
     rewrite /node /my_specific_tree_rep if_false; auto.
     Exists x0 v0 n'. entailer !.
     (* x = y *)
@@ -173,7 +177,7 @@ Proof.
     Exists x0 v0 n'.
     entailer !.
     assert (x = x0). lia. subst x0.
-    apply (H11 x), (H10 x) in H7.
+    apply (H12 x), (H11 x) in H7.
     lia.
 Qed.
 
@@ -221,13 +225,14 @@ Lemma contextualLeq_insert_node (Ip I1: flowint_T) (tp new_node: val) m1 :
     new_node <> tp ->
     {[new_node]} ## dom (out_map Ip) ->
     dom Ip ## dom (out_map Ip) ->
-    I1 = (flow_int {| infR := {[ tp := m1 ]}; outR := out_map Ip |}) -> m1 <> 0%CCM -> inf Ip tp <> 0%CCM ->
+    I1 = (flow_int {| infR := {[ tp := m1 ]}; outR := out_map Ip |}) ->
+    m1 <> 0%CCM -> inf Ip tp <> 0%CCM ->
     (forall (I0 : flowint_T), ✓ (I0 ⋅ Ip) /\ out (I0 ⋅ Ip) new_node = 0%CCM /\ (out I0 tp = inf Ip tp) /\
-             (dom I0 ## dom Ip) /\ (dom I0 ## dom I_new) /\ (dom I0 ## dom (out_map Ip)) 
-            -> contextualLeq _ (I0 ⋅ Ip) ((remap_out I0 tp new_node) ⋅ I1 ⋅ I_new) /\
+             (dom I0 ## dom Ip) /\ (dom I0 ## dom I_new) /\ (dom I0 ## dom (out_map Ip)) ->
+              contextualLeq _ (I0 ⋅ Ip) ((remap_out I0 tp new_node) ⋅ I1 ⋅ I_new) /\
               inf ((remap_out I0 tp new_node) ⋅ I1 ⋅ I_new) new_node = 0%CCM).
 Proof.
-  intros ? HdomIp Hne_new_tp Hne_new_n' Hne_tp_n' HI1 Hm1 Hinftp I0 I0p_cond. 
+  intros ? HdomIp Hne_new_tp Hne_new_n' Hne_tp_n' HI1 Hm1 Hinftp I0 I0p_cond.
   assert (dom Ip = dom I1) as domIp_I1. set_solver.
   assert (dom I_new = {[new_node]}) as Hnew_in_Inew. set_solver.
   assert (dom I1 = {[tp]} ) as Htp_in_I1. set_solver.
@@ -254,7 +259,7 @@ Proof.
   }
   assert (✓ (I1 ⋅ I_new)) as VI1_new.
   { apply intValid_composable.
-    do 2 (split ; auto). 
+    do 2 (split ; auto).
     repeat split; [|intros i x Hix; rewrite HI1 | intros i x Hix; rewrite HI1].
     * rewrite HI1 /I_new / dom /flowint_dom /=. clear -Hne_new_tp.  set_solver.
     * assert (i = tp) as ->.
@@ -302,7 +307,7 @@ Proof.
   assert (✓ (I0' ⋅ I1)) as VI0'_I1.
   {
     apply intValid_composable.
-    do 2 (split; auto). 
+    do 2 (split; auto).
     repeat split; try done.
     - rewrite /I0'. clear -Htp_in_I1 Htp_in_Ip HdomI0_p. set_solver.
     - intros x i Hx.
@@ -330,7 +335,7 @@ Proof.
   assert ( ✓ (I0' ⋅ (I1 ⋅ I_new))) as VI0'_I1_Inew.
   {
     apply intValid_composable.
-    do 2 (split; auto). 
+    do 2 (split; auto).
     repeat split; try done.
     - rewrite intComp_dom; try done.
       { rewrite /I0'. clear -HdomI0_new Htp_in_I1 Htp_in_Ip HdomI0_p. set_solver. }
@@ -382,7 +387,7 @@ Proof.
        rewrite (intComp_inf_2 I0' (I1  ⋅ I_new)); auto.
        2: { rewrite intComp_dom; auto. set_solver. }
        rewrite (intComp_inf_2 I1 I_new); try done.
-       2 : { clear -I_new. set_solver. } 
+       2 : { clear -I_new. set_solver. }
        rewrite /I_new HI1 /I0' /inf /out lookup_insert nzmap_lookup_total_insert_ne; try done.
        rewrite nzmap_lookup_total_insert; try done.
        rewrite /out /inf in HI0_p.
@@ -458,7 +463,8 @@ Qed.
 Definition insertOp_spec :=
   DECLARE _insertOp
     WITH x: Z, v: val, stt: Z, p: Node, tp: val, l: val, dl: val, Ip: flowintT,
-         Cp: (gmap Key data_struct.Value), next0: list Node, next: list Node, sh: share, gv: globals
+         Cp: (gmap Key data_struct.Value), next0: list Node, next: list Node,
+                          sh: share, gv: globals
   PRE [ tptr (tptr t_struct_list), tint, tptr tvoid, tint, tptr (struct_dlist)]
   PROP (repable_signed x; is_pointer_or_null v; length next = node_size;
         in_inset _ _ Key x Ip tp; ¬ in_outsets _ _ Key x Ip;
@@ -497,8 +503,7 @@ Proof.
 Qed.
 *)
 
-Definition Gprog : funspecs :=
-    ltac:(with_library prog [acquire_spec; release_spec; makelock_spec; surely_malloc_spec; insertOp_spec]).
+Definition Gprog : funspecs := ltac:(with_library prog [acquire_spec; release_spec; makelock_spec; surely_malloc_spec; insertOp_spec]).
 
 
 Lemma insertOp: semax_body Vprog Gprog f_insertOp insertOp_spec.
@@ -533,7 +538,6 @@ Proof.
     unfold node at 1. rewrite / my_specific_tree_rep if_false; auto.
     unfold node at 1. rewrite / my_specific_tree_rep if_true; auto.
     entailer !. rewrite /dom /flowint_dom /inf /=.
-    
     split.
     { rewrite /in_inset in H4.
       destruct H7 as (? & H7).
@@ -552,11 +556,10 @@ Proof.
       eexists.
       apply nzmap_lookup_filter_Some.
       split; eauto. lia.
-      Search dom nzmap.
       apply nzmap_elem_of_dom in H4.
       unfold is_Some in H4.
       destruct H4 as (? & H4).
-      rewrite /inf in H4. rewrite E in H4. set_solver. 
+      rewrite /inf in H4. rewrite E in H4. set_solver.
     }
     set_solver.
     assert (filter (λ '(k, _), (x < k)%Z) (inf Ip nullval) <> 0%CCM) as Hfl.
@@ -570,7 +573,6 @@ Proof.
       }
       apply nzmap_elem_of_dom_total in Hle.
       rewrite nzmap_lookup_total_alt in Hle.
-      simpl in Hle.
       destruct (lookup) eqn: Eqn.
       simpl in Hle.
       rewrite /inf /= in Eqn.
@@ -581,12 +583,11 @@ Proof.
       apply nzmap_elem_of_dom_total2 in Hfl.
       apply Hfl.
       apply nzmap_elem_of_dom.
-      unfold is_Some.
+      rewrite / is_Some.
       eexists.
       apply nzmap_lookup_filter_Some.
-      split. eauto. lia.
-      simpl in Hle. lia.
-    }   
+      split; eauto. lia. simpl in Hle. lia.
+    }
     Exists x v nullval.
     entailer !.
     rewrite /in_inset /inf /= in H4.
@@ -597,6 +598,22 @@ Proof.
       rewrite nzmap_dom_insert_nonzero. set_solver.
       auto.
     + set_solver.
+    + rewrite /inf /=.
+      rewrite lookup_insert.
+      destruct H7 as (k & H7).
+      (* specialize (H13 (Z.max k x)%Z). *)
+      exists (Z.max k x)%Z.
+      intros k' Hk'.
+      apply nzmap_elem_of_dom.
+      rewrite /is_Some.
+      specialize (H7 k').
+      assert (k' ∈ dom (inf Ip nullval)). apply H7. lia.
+      apply nzmap_elem_of_dom in H9.
+      rewrite /is_Some in H9.
+      destruct H9 as (? & H9).
+      rewrite /inf in H9.
+      rewrite H9.
+      by eexists.
     + rewrite /in_outset /out /out_map //= nzmap_lookup_total_insert in H9.
       apply nzmap_elem_of_dom_total in H9.
       rewrite nzmap_lookup_total_alt in H9.
@@ -608,7 +625,8 @@ Proof.
       rewrite /in_inset /inf lookup_insert /=. 
       rewrite /default /id in H9.
       destruct (lookup) eqn: Eqn.
-      ++ assert (dom (filter (λ '(k, _), (x < k)%Z) k) ⊆ dom k). { apply nzmap_dom_filter_subseteq. }
+      ++ assert (dom (filter (λ '(k, _), (x < k)%Z) k) ⊆ dom k).
+         { apply nzmap_dom_filter_subseteq. }
          set_solver.
       ++ apply nzmap_elem_of_dom_total in H4.
          rewrite nzmap_lookup_empty in H4. contradiction.
@@ -634,8 +652,7 @@ Proof.
       destruct (decide (nullval = n1)).
       { subst. by rewrite nzmap_lookup_total_insert in Hout. }
       { by rewrite nzmap_lookup_total_insert_ne in Hout. }
-    + rewrite Hznth. entailer !.
-      iIntros "_". iPureIntro.
+    + rewrite Hznth. entailer !. iIntros "_". iPureIntro.
     (* set I0' := remap_out Ip tp new_node. *)
       set I1 := flow_int
            {| infR := {[nullval := filter (λ '(k, _), (x < k)%Z) (inf Ip nullval)]};
@@ -671,7 +688,7 @@ Proof.
     { apply Ztac.elim_concl_le.
       intros Hlt.
       assert (Z.lt x0 x ∧ in_inset val_EqDecision Node_countable Key x Ip tp) as Hcm; auto.
-      apply (H13 x) in Hcm. set_solver.
+      apply (H14 x) in Hcm. set_solver.
     }
     assert_PROP (new_node <> nullval). entailer !.
     assert (list_to_gmap_aux next 0 !!! 0 = Znth 0 next /\
@@ -692,6 +709,31 @@ Proof.
     rewrite if_false; auto.
     rewrite if_false; auto.
     entailer !.
+    rewrite /in_inset /inf in H4.
+    assert ( filter (λ '(k, _), (x < k)%Z) (inf Ip tp) ≠ 0%CCM) as Hfl.
+    {
+      destruct (lookup) eqn: Eqn.
+      intros Hfl.
+      rewrite nzmap_eq in Hfl.
+      destruct H13 as (? & H13).
+      specialize (H13 ((Z.max x x1) + 1)%Z).
+      assert (((Z.max x x1) + 1)%Z ∈ dom (inf Ip tp)). apply H13. lia.
+      specialize (Hfl ((Z.max x x1) + 1)%Z).
+      rewrite /inf Eqn in H10.
+      rewrite nzmap_lookup_empty in Hfl.
+      apply nzmap_elem_of_dom_total2 in Hfl.
+      apply Hfl. clear Hfl.
+      rewrite nzmap_elem_of_dom in H10.
+      rewrite /is_Some in H10.
+      destruct H10 as (? & H10).
+      apply nzmap_elem_of_dom.
+      rewrite /is_Some.
+      eexists.
+      apply nzmap_lookup_filter_Some.
+      rewrite /inf Eqn. 
+      split; eauto. lia.
+      set_solver.
+    }
     Exists x v tp.
     Exists x0 v0 n'.
     entailer !.
@@ -701,36 +743,13 @@ Proof.
     + rewrite / out_map /inf /=.
       rewrite <- leibniz_equiv_iff.
       rewrite nzmap_dom_insert_nonzero. set_solver.
-      apply nzmap_elem_of_dom_total in H4.
-      destruct (decide (inf Ip tp = 0%CCM)).
-      {
-        rewrite /inf in e.
-        rewrite e in H4. set_solver.
-      }
-      destruct (lookup) eqn: Eqn.
-      intros Hfl.
-      rewrite nzmap_eq in Hfl.
-      specialize (Hfl x0).
-      rewrite nzmap_lookup_empty in Hfl.
-      apply nzmap_elem_of_dom_total2 in Hfl.
-      apply Hfl. clear Hfl.
-      apply nzmap_elem_of_dom_total in H4.
-      apply nzmap_elem_of_dom in H4.
-      rewrite /is_Some in H4.
-      destruct H4 as (? & H4).
-      apply nzmap_elem_of_dom.
-      rewrite /is_Some.
-      eexists.
-      apply nzmap_lookup_filter_Some.
-      simpl in *.
-      assert (k <> 0%CCM).
-      { rewrite /inf in n.
-        rewrite Eqn in n. simpl in n. auto.
-      }
-      admit.
-      set_solver.
+      rewrite /inf in Hfl. auto.
     + set_solver.
-    + rewrite /in_outset /out /out_map //= nzmap_lookup_total_insert in H10.
+    + rewrite /inf /=.
+      rewrite lookup_insert /=.
+      rewrite /inf in H13. apply H13.
+    +
+      rewrite /in_outset /out /out_map //= nzmap_lookup_total_insert in H10.
       apply nzmap_elem_of_dom_total in H10.
       rewrite nzmap_lookup_total_alt in H10.
       rewrite /default /id in H4.
@@ -741,7 +760,8 @@ Proof.
       rewrite /in_inset /inf lookup_insert /=. 
       rewrite /default /id in H10.
       destruct (lookup) eqn: Eqn.
-      ++ assert (dom (filter (λ '(k, _), (x < k)%Z) k) ⊆ dom k). { apply nzmap_dom_filter_subseteq. }
+      ++ assert (dom (filter (λ '(k, _), (x < k)%Z) k) ⊆ dom k).
+         { apply nzmap_dom_filter_subseteq. }
          set_solver.
       ++ rewrite /default in H4.
          apply nzmap_elem_of_dom_total in H4. set_solver.
@@ -765,13 +785,29 @@ Proof.
       { subst. by rewrite nzmap_lookup_total_insert in Hout. }
       { by rewrite nzmap_lookup_total_insert_ne in Hout. }
     + set_solver.
+    + rewrite /inf /=.
+      rewrite lookup_insert.
+      destruct H13 as (k & H13).
+      (* specialize (H13 (Z.max k x)%Z). *)
+      exists (Z.max k x)%Z.
+      intros k' Hk'.
+      apply nzmap_elem_of_dom.
+      rewrite /is_Some.
+      specialize (H13 k').
+      assert (k' ∈ dom (inf Ip tp)). apply H13. lia.
+      apply nzmap_elem_of_dom in H10.
+      rewrite /is_Some in H10.
+      destruct H10 as (? & H10).
+      eexists.
+      apply nzmap_lookup_filter_Some.
+      split; eauto. lia. 
     + rewrite /in_outset /out /= in H10.
-      specialize (H13 y).
-      apply H13 in H10. lia.
+      specialize (H14 y).
+      apply H14 in H10. lia.
     + rewrite /in_inset /inf lookup_insert. 
       rewrite /in_outset /out /= in H10. 
-      specialize (H13 y).
-      apply H13 in H10.
+      specialize (H14 y).
+      apply H14 in H10.
       destruct H10 as (Hlt & Hin).
       assert ((x < y)%Z) as Hlt_xy. lia.
       destruct (lookup) eqn: Eqn.
@@ -790,7 +826,7 @@ Proof.
       destruct Hin as (Hlt & Hin).
       rewrite /in_inset /out /out_map /inf /= lookup_insert in Hin. 
       rewrite /in_outset /out /=. 
-      apply H13.
+      apply H14.
       split; auto.
       destruct (lookup) eqn: Eqn.
       rewrite /in_inset /inf.
@@ -812,31 +848,39 @@ Proof.
     destruct HI0p as (? & ? & ? & ? & ? & ?).
     apply (contextualLeq_insert_node Ip I1 tp new_node).
     set_solver. auto.
-    assert (out I0 new_node = 0%CCM) as HoutIp.
+    assert (out Ip new_node = 0%CCM) as HoutIp.
     {
-      Search 0%CCM.
-      rewrite /out -nzmap_elem_of_dom_total2.
-      rewrite /out /inf in H32.
-      intros Hn.
-      rewrite nzmap_elem_of_dom_total in Hn.
-      rewrite /out -nzmap_elem_of_dom_total2 in Hn.
-      assert (tp 
-
-      set_solver.
-      
-      
-    unfold out in H36.
-    Search nzmap dom.
-    rewrite <- nzmap_elem_of_dom_total2 in H36. set_solver.
+      rewrite intComp_unfold_out in H32; auto.
+      rewrite /ccmop /ccmunit /ccm_op /= /lift_op /lift_unit /ccmop /ccm_op /ccm.nat_op /= in H32.
+      assert (out Ip new_node = nzmap_unit) as Hout_unit; try done.
+      {
+        rewrite nzmap_eq.
+        intros k.
+        rewrite nzmap_eq in H32.
+        specialize (H32 k).
+        rewrite nzmap_lookup_merge (nzmap_lookup_total_alt _ nzmap_unit) /lookup /nzmap_lookup /=
+          in H32.
+        apply Nat.eq_add_0 in H32.
+        destruct H32 as (_ & ?).
+        rewrite H32.
+        by rewrite (nzmap_lookup_total_alt _ nzmap_unit) /lookup /nzmap_lookup /= lookup_empty /=.
+      }
+      rewrite intComp_dom; auto.
+      assert (new_node ∉ dom Ip). { clear -H12 I_new H16. set_solver. }
+      assert (new_node ∉ dom I0). { clear -H35. set_solver. }
+      clear -H32 H37. set_solver.
+    }
+    rewrite /out in HoutIp.
+    rewrite <- nzmap_elem_of_dom_total2 in HoutIp. clear -HoutIp. set_solver.
     apply intComp_valid_proj2 in H10.
     apply intValid_unfold in H10.
     destruct H10 as (? & ? & ?).
     set_solver.
     rewrite /I1. auto.
-    admit. (* filter (λ '(k, _), (x < k)%Z) (inf Ip tp) ≠ 0%CCM *)
-    
+    apply Hfl.
     destruct (decide (inf Ip tp = 0%CCM)) as [Hinf | Hinf]; try done.
     { apply nzmap_elem_of_dom_total in H4.
+      rewrite /inf in Hinf. 
       rewrite Hinf in H4. set_solver. }
     split; auto.
-    Admitted.
+Qed.
