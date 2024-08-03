@@ -390,6 +390,16 @@ Proof.
        { clear -Hsubset. set_solver. }
        clear -Hdom_subset. set_solver.
      }
+     (*
+     assert (keyset _ _ _ I1 tp ## keyset _ _ _ I_new new_node).
+     {
+       rewrite /keyset HI1 /I_new /= /inf /=.
+       rewrite ! lookup_insert /= /out /= nzmap_lookup_total_insert_ne /=; auto.
+       rewrite nzmap_lookup_empty.
+       assert (out_map Ip !!! tp = 0%CCM) as Hout_tp.
+       { rewrite <- nzmap_elem_of_dom_total2. set_solver. }
+       rewrite Hout_tp.
+*)
      (* main result *)
      repeat split; try done.
      - rewrite <- intComp_assoc_valid; auto.

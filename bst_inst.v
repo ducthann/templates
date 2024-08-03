@@ -55,44 +55,69 @@ Class NodeRep : Type := {
 
  *)
 
- Check list Node.
+Local Instance nzmap_filter: Filter (Z * nat) (@multiset_flows.K_multiset Key Z.eq_dec Z_countable).
+Proof.
+  intros ???.
+  eapply (NZMap (filter P (nzmap_car H2)) _).
+  Unshelve.
+  unfold bool_decide.
+  destruct (nzmap_wf_decision Key (filter P (nzmap_car H2))); try done.
+  rewrite /not in n. apply n. clear n.
+  rewrite / nzmap_wf /map_Forall.
+  intros i x Hf.
+  assert (nzmap_wf (nzmap_car H2)) as wfH. { apply nzmap_is_wf. }
+  apply map_lookup_filter_Some_1_1 in Hf.
+  rewrite /nzmap_wf /map_Forall in wfH.
+  eapply wfH; eauto.
+Defined.
+
+Lemma nzmap_lookup_filter_Some `{Countable K} `{CCM A}
+  (P : Z * nat → Prop) (H7 : ∀ x : Z * nat, Decision (P x)) (m : nzmap Z nat) (i : Z) (x : nat):
+  filter P m !! i = Some x <-> m !! i = Some x /\ P (i, x).
+Proof.
+  rewrite /lookup /nzmap_lookup.
+  split; intros; destruct m.
+  - rewrite /filter /= in H3. { by apply map_lookup_filter_Some in H3. }
+  - by rewrite /filter map_lookup_filter_Some.
+Qed.
+
+Lemma nzmap_dom_filter_subseteq (P : Z * nat → Prop) `{!∀ x, Decision (P x)} (m : nzmap Z nat):
+  dom (filter P m) ⊆ dom m.
+Proof. destruct m. rewrite / filter /nzmap_dom /=. apply dom_filter_subseteq. Qed.
 
 
-  
 #[local] Obligation Tactic := idtac.
 
 #[local] Program Instance my_specific_tree_rep : NodeRep := {
   node := fun (n : Node) (In : @multiset_flowint_ur Key _ _) (C: gmap Key data_struct.Value)
-            (next:  gmap nat Node) =>
+            (next:  gmap nat val) =>
   if eq_dec n nullval
-  then ⌜True⌝
+  then ⌜inf In n = 0%CCM 
+         (* (∃ (k : Z), ∀ (k' : Z), (k < k')%Z -> k' ∈ dom (inf In n)) ∧ 
+         out_map In = ∅ ∧ C = ∅ /\ dom In = {[ n ]} *)⌝ ∧ emp
   else
-  (∃ (x : Z) (v : val) (p1 p2: nat),
-      ⌜and (Z.le Int.min_signed x) (Z.le x Int.max_signed) /\
-       is_pointer_or_null (next !!! p1) /\ is_pointer_or_null (next !!! p2) /\
-          (tc_val (tptr Tvoid) v) ∧
-        (forall y, in_outset _ _ _ y In (next !!! p1) <-> Z.lt y x ∧ in_inset _ _ _ y In n) ∧
-        (forall y, in_outset _ _ _ y In (next !!! p2) <-> Z.lt x y ∧ in_inset _ _ _ y In n) ∧
-        (forall y, in_outsets _ _ _ y In -> in_outset _ _ _ y In (next !!! p1) ∨ in_outset _ _ _ y In (next !!! p2))⌝ ∧
-       data_at Ews t_struct_tree (Vint (Int.repr x), (v, ((next !!! p1), (next !!! p2)))) n ∗
+  (∃ (x : Z) (v : val) (m1 m2: Node),
+      ⌜(Int.min_signed <= x <= Int.max_signed)%Z /\ is_pointer_or_null (next !!! 0) /\
+        is_pointer_or_null (next !!! 1) /\ (tc_val (tptr Tvoid) v)
+        ∧ C = {[x := v]}
+        ∧ (dom (out_map In) = {[ if (eq_dec m1 nullval) then nullval else m1; if (eq_dec m2 nullval) then nullval else m2]}) ∧ dom In = {[ n ]} ∧
+        (forall y, in_outset _ _ Key y In m1 <-> (y < x)%Z ∧ in_inset _ _ _ y In n) ∧
+        (forall y, in_outset _ _ Key y In m2 <-> (x < y)%Z ∧ in_inset _ _ _ y In n) ∧
+        (forall y, in_outsets _ _ Key y In -> in_outset _ _ _ y In m1 ∨ in_outset _ _ _ y In m2)⌝ ∧
+       data_at Ews t_struct_tree (Vint (Int.repr x), (v, ((next !!! 0), (next !!! 1)))) n ∗
        malloc_token Ews t_struct_tree n); node_size := 2}.
 (* ; node_rep_R_valid_pointer }. *)
 Next Obligation.
-  intros n In Cn next. 
-  destruct (EqDec_val n nullval). 
-  - simpl. rewrite e. auto.
-  - rewrite if_false; auto. iIntros "H".
-    iDestruct "H" as (x v p1 p2) "(%HJ & (H1 & H2))".
-    iStopProof. entailer !.
+  intros n In Cn next.
+  destruct (EqDec_val n nullval) as [-> | Hn]; auto.
+  rewrite if_false; auto.
+  iIntros "H". iDestruct "H" as (x v m1 m2) "H". iStopProof. entailer !.
 Defined.
 Next Obligation.
   intros n In Cn next.
-  destruct (EqDec_val n nullval).
-  - simpl. rewrite e. auto.
-  - rewrite if_false; auto.
-    iIntros "H".
-    iDestruct "H" as (x v p1 p2) "(%HJ & (H1 & H2))".
-    iStopProof. entailer !.
+  destruct (EqDec_val n nullval) as [-> | Hn]; auto.
+  rewrite if_false; auto.
+  iIntros "H". iDestruct "H" as (x v m1 m2) "H". iStopProof. entailer !.
 Defined.
 
 (* Spec of findnext function *)
@@ -102,71 +127,62 @@ Definition findnext_spec :=
   WITH x: Z, p: Node, n: val, n_pt : val, Ip : flowintT,
                 Cp : (gmap Key data_struct.Value), nextp : gmap nat Node, sh: share, gv: globals
   PRE [ tptr t_struct_tree, tptr (tptr tvoid), tint ]
-          PROP (writable_share sh;
-                (Int.min_signed ≤ x ≤ Int.max_signed)%Z
-          (*; is_pointer_or_null pa; is_pointer_or_null pb*) )
+          PROP (writable_share sh; (Int.min_signed ≤ x ≤ Int.max_signed)%Z)
           PARAMS (p; n; Vint (Int.repr x)) GLOBALS (gv)
-          SEP (node p Ip Cp nextp ∗ ⌜p <> nullval /\ in_inset _ _ _ x Ip p⌝ ∧
-               (* field_at sh (t_struct_tree) [StructField _t] r.1.1.1 p; *)
+          SEP (node p Ip Cp nextp ∗ ⌜p <> nullval /\ in_inset _ _ Key x Ip p⌝ ∧
                data_at sh (tptr tvoid) n_pt n)
   POST [ tint ]
-  ∃ (stt: enum), ∃ (n' next : Node),
+  ∃ (stt: enum), ∃ (n' next : val), ∃ (m1 m2 : Node), (* list of m for generic *)
          PROP (match stt with
                | F | NF => (n' = p)
                | NN => (n' = next)
-               end)
+               end; (dom (out_map Ip) = {[ if (eq_dec m1 nullval) then nullval else m1; if (eq_dec m2 nullval) then nullval else m2]}))
         LOCAL (temp ret_temp (enums stt))
         SEP (match stt with
                | F | NF => ⌜¬in_outsets _ _ _ x Ip⌝ ∧ data_at sh (tptr tvoid) n_pt n
-               | NN => ⌜in_outset _ _ _ x Ip next⌝ ∧ data_at sh (tptr tvoid) next n
-             end ∗
-               node p Ip Cp nextp).
+               | NN => ⌜in_outset _ _ _ x Ip m1 ∨ in_outset _ _ _ x Ip m2⌝ ∧
+                        data_at sh (tptr tvoid) next n
+             end ∗ node p Ip Cp nextp).
 
 Lemma findNext: semax_body Vprog Gprog f_findNext findnext_spec.
 Proof.
   start_function.
   Intros.
-  unfold node.
-  unfold my_specific_tree_rep.
-  rewrite -> if_false; eauto.
-  Intros x0 v0 p1 p2.
+  rewrite /node /my_specific_tree_rep if_false; eauto.
+  Intros x0 v0 m1 m2.
   forward.
   forward_if. (* if (_x < _y) *)
-  - forward. forward. forward.
-    Exists NN (nextp !!! p1) (nextp !!! p1) .
-    unfold node.
-    unfold my_specific_tree_rep.
-    rewrite -> if_false; auto.
-    Exists x0 v0 p1 p2.
+  - do 3 forward. 
+    Exists NN (nextp !!! 0) (nextp !!! 0) m1 m2.
+    rewrite /node /my_specific_tree_rep.
+    destruct (eq_dec p nullval); auto. { contradiction. }
+    Exists x0 v0 m1 m2.
     entailer !.
-    apply (H8 x). split. lia.
-    auto.
+    left. apply (H11 x); auto. 
   - (* if (_x > _y) *)
     forward_if.
-    repeat forward.
-    Exists NN (nextp !!! p2) (nextp !!! p2).
+    do 3 forward.
+    Exists NN (nextp !!! 1) (nextp !!! 1) m1 m2.
+    rewrite /node /my_specific_tree_rep.
+    destruct (eq_dec p nullval); auto. { contradiction. }
+    Exists x0 v0 m1 m2.
     entailer !.
-    apply (H9 x). split. lia. auto. 
-    unfold node, my_specific_tree_rep.
-    rewrite -> if_false; auto.
-    Exists x0 v0 p1 p2.
-    entailer !.
+    right. apply (H12 x); auto.
     (* x = y *)
     forward.
-    Exists F p p.
-    unfold node, my_specific_tree_rep.
-    rewrite -> if_false; auto.
-    Exists x0 v0 p1 p2.
+    Exists F p p m1 m2.
+    rewrite /node /my_specific_tree_rep.
+    destruct (eq_dec p nullval); auto. { contradiction. }
+    Exists x0 v0 m1 m2.
     entailer !.
-    assert (x = x0). lia.
-    subst x0.
-    specialize (H8 x).
-    specialize (H9 x).
-    specialize (H10 x).
-    apply H10 in H18.
-    destruct H18.
-    apply H8 in H18. lia.
-    apply H9 in H18. lia.
+    assert (x = x0). lia. subst x0.
+    specialize (H11 x).
+    specialize (H12 x).
+    specialize (H13 x).
+    apply H13 in H8.
+    destruct H8.
+    { apply H11 in H8. lia. }
+    { apply H12 in H8. lia. }
 Qed.
 
 Definition surely_malloc_spec :=
@@ -184,72 +200,220 @@ Definition surely_malloc_spec :=
        RETURN (p)
        SEP (mem_mgr gv; malloc_token Ews t p ∗ data_at_ Ews t p).
 
+Fixpoint list_to_gmap_aux (l : list Node) (key : nat) : gmap nat Node :=
+  match l with
+  | [] => ∅
+  | x :: xs => <[key:=x]> (list_to_gmap_aux xs (S key))
+  end.
+
+Definition list_to_gmap (l : list Node) : gmap nat Node :=
+  list_to_gmap_aux l 0.
+
+(*  Ip : @flowintT _ K_multiset_ccm  _ _ *)
+
+(*  @flows.int (@multiset_flows.K_multiset Key Z.eq_dec Z_countable) K_multiset_ccm _  _
+          {|infR := {[ tp := S ]}; outR := <<[ Znth 0 next0 := S ]>> ∅ |} = Ip; *)
+
+Definition flow_int I:= @flows.int (@multiset_flows.K_multiset Key Z.eq_dec Z_countable)
+                           K_multiset_ccm _ _ I.
+
+Definition remap_out I I_new new_node:=
+  flow_int {| infR := inf_map I; outR := <<[ new_node := inf I_new new_node ]>>∅ |}.
+
+Definition flowint_T := @flowintT (@multiset_flows.K_multiset Key Z.eq_dec Z_countable) _ _ _.
+
+(* Definition  @I_empty (@multiset_flows.K_multiset Key Z.eq_dec Z_countable) _ _ _. *)
+
+Lemma contextualLeq_insert_BST_node_empty (Ip: flowint_T) (new_node: val) m1 ks:
+     let I_new := flow_int {| infR := {[new_node := m1]}; outR := ∅ |} in
+     Ip = flow_int I_emptyR -> m1 <> 0%CCM ->
+    (forall (I0 : flowint_T), ✓ (I0 ⋅ Ip) ∧ (dom I0 ## dom I_new) ∧ 
+                         I0 = flow_int {| infR := ks; outR := ∅ |}
+            -> contextualLeq _ (I0 ⋅ Ip) ((remap_out I0 I_new new_node) ⋅ I_new)).
+Proof.
+  intros.
+  destruct H3 as (? & ?).
+  assert (✓ I_new) as VInew; auto.
+  {
+    rewrite intValid_unfold.
+    do 2 (split; auto).
+    rewrite /I_new /out_map /= /dom /=.
+    set_solver.
+  }
+  set I0' := remap_out I0 I_new new_node.
+  assert (✓ (I0' ⋅ I_new)) as VI0'new.
+  {
+    pose proof VInew as VInew'.
+    apply intValid_composable.
+    do 2 (split ; auto).
+    - simpl.
+      apply intValid_unfold in VInew.
+      destruct VInew as (? & ? & ?).
+      rewrite /I_new /= in H6 .
+      rewrite nzmap_dom_insert_nonzero. set_solver.
+      rewrite /inf /=.
+      rewrite lookup_insert. simpl. auto.
+    - intros Hin.
+      simpl in Hin.
+      simpl. admit.
+    - repeat (split; auto).
+      + rewrite /I0' /I_new /flowint_dom /=. set_solver. 
+      + intros i x Hix.
+        rewrite /I_new /out /=.
+        rewrite nzmap_lookup_empty.
+        rewrite ccm_comm ccm_pinv_unit ccm_right_id.
+        rewrite /inf. rewrite Hix. auto.
+      + intros i x Hix.
+        rewrite /I0' /I_new /out /inf /=.
+        assert (i = new_node) as ->.
+        {
+          rewrite /I_new /= in Hix.
+          destruct (decide (i = new_node)); auto.
+          rewrite lookup_insert_ne in Hix; auto.
+          set_solver.
+        }
+        rewrite nzmap_lookup_total_insert.
+        rewrite /inf /=.
+        rewrite ccm_pinv_inv ccm_right_id lookup_insert.
+        rewrite /I_new /= in Hix.
+        rewrite lookup_insert in Hix.
+        by injection Hix.
+  }
+  repeat split; try done.
+  - rewrite intComp_dom; auto.
+    rewrite intComp_dom; auto.
+    rewrite H1 /I0' /I_new /= /flowint_dom /=.
+    set_solver.
+  - intros x Hx.
+    rewrite intComp_dom in Hx; auto.
+    rewrite H1 /= /flowint_dom /inf_map /= in Hx.
+    assert (x ∈ dom I0). set_solver.
+    assert (x ∈ dom I0'). set_solver.
+    rewrite intComp_inf_1; auto.
+    rewrite intComp_inf_1; auto.
+    assert (out Ip x = out I_new x) as ->.
+    {
+      rewrite H1 /I_new /out /=. auto.
+    }
+    assert (inf I0 x = inf I0' x) as ->. set_solver.
+    auto. 
+  - intros x Hx.
+    destruct (decide (x ∈ dom (I0 ⋅ Ip))) as [Hout | Hout].
+    {
+      rewrite intComp_dom in Hout; auto.
+      rewrite intComp_dom in Hx; auto.
+      assert (x ∈ dom I0). set_solver. set_solver.
+    }
+    {
+      rewrite intComp_unfold_out; auto.
+      rewrite intComp_unfold_out; auto.
+      rewrite H1 /I0' /I_new /= /out /=.
+      assert (x <> new_node).
+      { destruct (decide (x = new_node)) as [-> | Hnew]; try done.
+        { rewrite intComp_dom in Hx; auto.
+          set_solver. 
+        }
+      }
+      rewrite nzmap_lookup_total_insert_ne; auto.
+      destruct H4 as (? & ?).
+      rewrite H6. simpl. auto.
+    }
+    Admitted.
+
 Definition insertOp_spec :=
   DECLARE _insertOp
-    WITH x: Z, stt: Z, v: val, p: val, tp: val, l: val, dl: val, next: list val, r: node_info,
-                    g: gname, gv: globals
+    WITH x: Z, v: val, stt: Z, p: Node, tp: val, l: val, dl: val, Ip: flowintT,
+         Cp: (gmap Key data_struct.Value), next0: list Node, next: list Node, sh: share, gv: globals
   PRE [ tptr (tptr t_struct_tree), tint, tptr tvoid, tint, tptr (struct_dlist)]
-  PROP (repable_signed x; is_pointer_or_null v; is_pointer_or_null (Znth 0 next);
-        is_pointer_or_null (Znth 1 next); key_in_range x r.1.2 = true ;
-        length next = node_size)
+  PROP (repable_signed x; is_pointer_or_null v;
+        is_pointer_or_null (Znth 0 next); is_pointer_or_null (Znth 1 next);
+        in_inset _ _ Key x Ip tp; ¬ in_outsets _ _ Key x Ip;
+        length next = node_size; tp = nullval)
   PARAMS (p; Vint (Int.repr x); v; Vint (Int.repr stt); l)
   GLOBALS (gv)
-  SEP (mem_mgr gv; field_at Ews (struct_dlist) [StructField _list] dl l *
-                     data_at Ews (tarray (tptr tvoid) (Zlength next)) next dl * 
-                     (* (!!(p = r.1.1.1 /\ p = nullval)  && seplog.emp); *)
-       data_at Ews (tptr t_struct_tree) tp p)
+  SEP (mem_mgr gv;
+       node tp Ip Cp (list_to_gmap next0);
+       field_at Tsh (struct_dlist) (DOT _list) dl l;
+       data_at Ews (tptr t_struct_tree) tp p;
+       data_at Ews (tarray (tptr tvoid) (Zlength next)) next dl)
   POST[ tvoid ]
-  ∃ (pnt : val),
-  PROP (pnt <> nullval)
+  ∃ (new_node : Node) (I_new: flowintT), (* It is a combination of two new I1 and I2 flows *)
+  PROP (new_node <> nullval)
   LOCAL ()
-  SEP (mem_mgr gv; data_at Ews (tptr t_struct_tree) pnt p;
-       node_rep_R pnt r.1.2 (Some (Some (x, v, next))) g;
-       field_at Ews struct_dlist (DOT _list) dl l;
-       data_at Ews (tarray (tptr tvoid) (Zlength next)) next dl).
+  SEP (mem_mgr gv; node new_node I_new ({[x := v]}) (list_to_gmap next);
+       field_at Tsh struct_dlist (DOT _list) dl l;
+       data_at Ews (tptr t_struct_tree) new_node p;
+       data_at Ews (tarray (tptr tvoid) (Zlength next)) next dl;
+     ⌜∀ I0, ✓ (I0 ⋅ Ip) ∧ (dom I0 ## dom I_new) ∧ 
+                         I0 = flow_int {| infR := ks; outR := ∅ |}
+            -> contextualLeq _ (I0 ⋅ Ip) ((remap_out I0 I_new new_node) ⋅ I_new)⌝).
 
-Lemma length_equal_2 (x: Z) (v: val) (next : list val):
-  length next = 2%nat ->
-  Some (Some (x, v, next)) = Some (Some (x, v, [Znth 0 next; Znth 1 next])).
-Proof.
-  intros H_length.
-  destruct next as [|a [|b tl]] eqn:Heq_next; try discriminate.
-  inversion H_length; subst.
-  unfold Znth; simpl.
-  repeat f_equal. 
-  by apply nil_length_inv. 
-Qed.
+Definition Gprog : funspecs := ltac:(with_library prog [acquire_spec; release_spec; makelock_spec; surely_malloc_spec; insertOp_spec]).
 
-Definition Gprog : funspecs :=
-    ltac:(with_library prog [acquire_spec; release_spec; makelock_spec;
-     surely_malloc_spec; insertOp_spec (* ; traverse_spec; insert_spec; treebox_new_spec*) ]).
 (* Proving insertOp satisfies spec *)
 Lemma insertOp: semax_body Vprog Gprog f_insertOp insertOp_spec.
 Proof.
   start_function.
   forward_call (t_struct_tree, gv).
   Intros new_node.
-  forward.
-  forward.
-  forward.
-  forward.
+  do 4 forward.
   entailer !.
-  simpl in H4.
-  by rewrite Zlength_correct H4.
-  forward.
-  forward.
-  forward.
+  simpl in H7. by rewrite Zlength_correct H7.
+  do 3 forward.
   entailer !.
-  simpl in H4.
-  by rewrite Zlength_correct H4.
-  forward.
-  forward.
+  simpl in H7. by rewrite Zlength_correct H7.
+  do 2 forward.
   Exists new_node.
   assert_PROP (new_node <> nullval) by entailer !.
-  unfold node_rep_R.
-  unfold my_specific_tree_rep.
-  rewrite if_false; auto.
+  rewrite /in_outsets in H6. 
+  assert (forall n, ¬in_outset val_EqDecision Node_countable Key x Ip n) as allNot. set_solver.
+  clear H6.
+  subst tp.
+  unfold node at 1. rewrite /my_specific_tree_rep.
+  rewrite -> if_true; auto.
+  Intros.
+  Exists (flow_int {| infR := {[ new_node := inf Ip nullval ]}; outR :=  ∅ |}).
+  Exists (flow_int I_emptyR).
+  Exists (flow_int I_emptyR).
   entailer !.
-  Exists x v (Znth 0 next) (Znth 1 next).
+  assert_PROP (new_node <> nullval). entailer !.
+  unfold node at 1.
+  rewrite -> if_false; auto.
+  Exists x v nullval nullval.
   entailer !.
-  by apply length_equal_2.
-Qed.
+  repeat split; try done.
+  + admit.
+  + admit.
+  + set_solver.
+  + intros (HLe & Hin).
+    rewrite /in_inset /inf /= lookup_insert /= in Hin.
+    rewrite /inf in H6.
+    rewrite H6 in Hin. set_solver.
+  + intros (HLe & Hin).
+    rewrite /in_inset /inf /= lookup_insert /= in Hin.
+    rewrite /inf in H6. rewrite H6 in Hin. set_solver.
+  + intros.
+    rewrite /in_outsets in H22.
+    destruct H22 as (? & H22).
+    rewrite /inf in H6.
+    left.
+    rewrite /in_outset /= /out /out_map /= in H22.
+    rewrite nzmap_lookup_empty in H22. set_solver.
+  + assert (Znth 0 next = list_to_gmap next !!! 0). admit.
+    assert (Znth 1 next = list_to_gmap next !!! 1). admit.
+    rewrite H22. rewrite H23. entailer !.
+    iIntros "_". iPureIntro.
+    do 2 ( split; auto).
+    intros I0 HI0p.
+    destruct HI0p as (? & ? & ? & ? & ? & ?).
+    eapply  (contextualLeq_insert_BST_node_empty Ip (flow_int I_emptyR) (flow_int I_emptyR) new_node); try done.
+    admit.
+    apply intComp_valid_proj2 in H25.
+    apply intValid_unfold in H25.
+    destruct H25 as (? & ? & ?).
+    rewrite H6 in H27.
+    rewrite /out in H27.
+    Search nzmap 0%CCM.
+    rewrite <- nzmap_elem_of_dom_total2 in H27.
+
+Admitted.
